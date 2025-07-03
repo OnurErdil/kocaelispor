@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "795646490074",
+    "project_id": "kocaelispor-fan-mobil",
+    "storage_bucket": "kocaelispor-fan-mobil.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:795646490074:android:f13b68ecaf64377f797ce3",
+        "android_client_info": {
+          "package_name": "com.example.kocaelispor_1966_mobil"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIL52vCDZQqgBjzi6SKnkec3udEOO3RVs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:795646490074:android:a212a5ed56b5e21d797ce3",
+        "android_client_info": {
+          "package_name": "com.kocaelisporfanmobil.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIL52vCDZQqgBjzi6SKnkec3udEOO3RVs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
