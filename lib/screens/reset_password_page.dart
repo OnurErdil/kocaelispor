@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/custom_app_bar.dart'; // ✅ Import ekleyin
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
@@ -90,10 +91,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Şifre Sıfırla"),
-        backgroundColor: const Color(0xFF00913C),
-        foregroundColor: Colors.white,
+      appBar: const CustomAppBar(
+        title: "Şifre Sıfırla",
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),

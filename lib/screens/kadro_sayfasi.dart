@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/custom_app_bar.dart'; // ✅ Import ekleyin
 
 // Constants için ayrı dosya oluşturmanız önerilir
 class AppColors {
@@ -19,7 +20,9 @@ class KadroSayfasi extends StatelessWidget {
     const bool isAdmin = true;
 
     return Scaffold(
-      appBar: _buildCustomAppBar(context),
+      appBar: const CustomAppBar(
+        title: "Takım Kadrosu",
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('Takım')
@@ -43,44 +46,6 @@ class KadroSayfasi extends StatelessWidget {
         },
       ),
       floatingActionButton: isAdmin ? _buildFAB(context) : null,
-    );
-  }
-
-  PreferredSizeWidget _buildCustomAppBar(BuildContext context) {
-    return AppBar(
-      automaticallyImplyLeading: false,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      flexibleSpace: SafeArea(
-        child: Container(
-          margin: const EdgeInsets.all(8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.white),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              const Expanded(
-                child: Text(
-                  'Takım',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22,
-                    color: AppColors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 48),
-            ],
-          ),
-        ),
-      ),
     );
   }
 

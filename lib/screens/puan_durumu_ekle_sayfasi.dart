@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/custom_app_bar.dart'; // ✅ Import ekleyin
 
 class PuanDurumuEkleSayfasi extends StatefulWidget {
   const PuanDurumuEkleSayfasi({super.key});
@@ -73,10 +74,8 @@ class _PuanEkleSayfasiState extends State<PuanDurumuEkleSayfasi> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Puan Girişi"),
-        backgroundColor: _primaryColor,
-        foregroundColor: Colors.white,
+      appBar: const CustomAppBar(
+        title: "Puan Girişi",
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

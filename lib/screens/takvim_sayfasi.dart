@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kocaelispor_1966_mobil/screens/puan_durumu_sayfasi.dart';
+import '../widgets/custom_app_bar.dart'; // ✅ Import ekleyin
 
 class TakvimSayfasi extends StatelessWidget {
   const TakvimSayfasi({super.key});
@@ -9,7 +10,9 @@ class TakvimSayfasi extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Takım")),
+      appBar: const CustomAppBar(
+        title: "Fikstür & Takvim",
+      ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () => _showAddMatchDialog(context),
@@ -35,19 +38,54 @@ class TakvimSayfasi extends StatelessWidget {
                   .limit(1)
                   .snapshots(),
               builder: (context, snapshot) {
+                // ✅ Hata durumu düzgün yönetimi
                 if (snapshot.hasError) {
-                  return const Center(child: Text("Hata oluştu!"));
-                }
-                if (!snapshot.hasData) {
-                  return const CircularProgressIndicator();
-                }
-                if (snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text("Oynanmış maç yok!"));
+                  return _buildErrorCard(
+                    "Son maç yüklenemiyor",
+                    snapshot.error.toString(),
+                    Icons.sports_soccer,
+                  );
                 }
 
-                final match =
-                snapshot.data!.docs.first.data() as Map<String, dynamic>;
-                return _buildMatchCard(match);
+                // ✅ Loading state
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return _buildLoadingCard();
+                }
+
+                // ✅ Null safety
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return _buildErrorCard(
+                    "Veri yüklenemedi",
+                    "Bağlantı sorunu olabilir",
+                    Icons.cloud_off,
+                  );
+                }
+
+                if (snapshot.data!.docs.isEmpty) {
+                  return _buildEmptyCard("Henüz oynanmış maç yok", Icons.schedule);
+                }
+
+                // ✅ Güvenli veri çekme
+                try {
+                  final doc = snapshot.data!.docs.first;
+                  final match = doc.data() as Map<String, dynamic>?;
+
+                  if (match == null) {
+                    return _buildErrorCard(
+                      "Maç verisi okunamadı",
+                      "Veri formatı hatalı",
+                      Icons.error_outline,
+                    );
+                  }
+
+                  return _buildMatchCard(match);
+                } catch (e) {
+                  return _buildErrorCard(
+                    "Maç verisi işlenemiyor",
+                    e.toString(),
+                    Icons.bug_report,
+                  );
+                }
               },
             ),
 
@@ -62,19 +100,54 @@ class TakvimSayfasi extends StatelessWidget {
                   .limit(1)
                   .snapshots(),
               builder: (context, snapshot) {
+                // ✅ Hata durumu düzgün yönetimi
                 if (snapshot.hasError) {
-                  return const Center(child: Text("Hata oluştu!"));
-                }
-                if (!snapshot.hasData) {
-                  return const CircularProgressIndicator();
-                }
-                if (snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text("Maç yok!"));
+                  return _buildErrorCard(
+                    "Yaklaşan maç yüklenemiyor",
+                    snapshot.error.toString(),
+                    Icons.event,
+                  );
                 }
 
-                final match =
-                snapshot.data!.docs.first.data() as Map<String, dynamic>;
-                return _buildMatchCard(match);
+                // ✅ Loading state
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return _buildLoadingCard();
+                }
+
+                // ✅ Null safety
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return _buildErrorCard(
+                    "Veri yüklenemedi",
+                    "Bağlantı sorunu olabilir",
+                    Icons.cloud_off,
+                  );
+                }
+
+                if (snapshot.data!.docs.isEmpty) {
+                  return _buildEmptyCard("Yaklaşan maç yok", Icons.event_busy);
+                }
+
+                // ✅ Güvenli veri çekme
+                try {
+                  final doc = snapshot.data!.docs.first;
+                  final match = doc.data() as Map<String, dynamic>?;
+
+                  if (match == null) {
+                    return _buildErrorCard(
+                      "Maç verisi okunamadı",
+                      "Veri formatı hatalı",
+                      Icons.error_outline,
+                    );
+                  }
+
+                  return _buildMatchCard(match);
+                } catch (e) {
+                  return _buildErrorCard(
+                    "Maç verisi işlenemiyor",
+                    e.toString(),
+                    Icons.bug_report,
+                  );
+                }
               },
             ),
 
@@ -84,7 +157,7 @@ class TakvimSayfasi extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  // Tüm fikstür sayfasına yönlendir
+                  // TODO: Tüm fikstür sayfasına yönlendir
                 },
                 child: const Text("Bütün Fikstür & Sonuçları Görüntüle"),
               ),
@@ -108,24 +181,120 @@ class TakvimSayfasi extends StatelessWidget {
     );
   }
 
+  // ✅ Hata kartı widget'ı
+  Widget _buildErrorCard(String title, String message, IconData icon) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 48, color: Colors.red.shade600),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.red.shade800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.red.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ Loading kartı widget'ı
+  Widget _buildLoadingCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Column(
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text(
+            "Maç bilgileri yükleniyor...",
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ Empty state kartı widget'ı
+  Widget _buildEmptyCard(String message, IconData icon) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 48, color: Colors.grey.shade600),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMatchCard(Map<String, dynamic> match) {
-    final Timestamp tarihTimestamp = match['tarih'] as Timestamp;
+    // ✅ Null safety ile güvenli değer çekme
+    final tarihTimestamp = match['tarih'] as Timestamp?;
+    if (tarihTimestamp == null) {
+      return _buildErrorCard(
+        "Tarih bilgisi eksik",
+        "Maç tarihi bulunamadı",
+        Icons.date_range,
+      );
+    }
+
     final dateTime = tarihTimestamp.toDate();
     final formattedDate = "${dateTime.day}.${dateTime.month}.${dateTime.year}";
 
+    // ✅ Güvenli değer atamaları
+    final durum = match['durum'] as String? ?? 'Bilinmiyor';
+    final skor = match['skor'] as String? ?? '-';
+    final saat = match['saat'] as String? ?? '';
+    final lig = match['lig'] as String? ?? 'Lig Yok';
+    final rakip = match['rakip'] as String? ?? 'Rakip Yok';
+    final evSahibi = match['evSahibi'] as String? ?? 'Ev Sahibi';
+    final evLogo = match['evSahibiLogo'] as String? ?? '';
+    final rakipLogo = match['rakipLogo'] as String? ?? '';
+
     String gosterim;
-    if (match['durum'] == "Yaklaşan") {
+    if (durum == "Yaklaşan") {
       gosterim = "${dateTime.day}.${dateTime.month}";
     } else {
-      gosterim = match['skor'] ?? '-';
+      gosterim = skor;
     }
-
-    final saat = match['saat'] ?? '';
-    final lig = match['lig'] ?? 'Lig Yok';
-    final rakip = match['rakip'] ?? 'Rakip Yok';
-    final evSahibi = match['evSahibi'] ?? 'Ev Sahibi';
-    final evLogo = match['evSahibiLogo'] ?? '';
-    final rakipLogo = match['rakipLogo'] ?? '';
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
@@ -156,19 +325,16 @@ class TakvimSayfasi extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(lig,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 16)),
-              // Sağ üstte tarih yok!
+                  style: const TextStyle(color: Colors.white, fontSize: 16)),
             ],
           ),
           const SizedBox(height: 8),
 
           // Skor kutusu üstü tarih sadece oynanmış maç için
-          if (match['durum'] != "Yaklaşan")
+          if (durum != "Yaklaşan")
             Text(
               formattedDate,
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 14),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
 
           const SizedBox(height: 8),
@@ -180,7 +346,7 @@ class TakvimSayfasi extends StatelessWidget {
               // Ev Sahibi
               Column(
                 children: [
-                  Image.network(evLogo, height: 50),
+                  _buildTeamLogo(evLogo, evSahibi),
                   const SizedBox(height: 6),
                   Text(evSahibi,
                       style: const TextStyle(color: Colors.white)),
@@ -188,8 +354,7 @@ class TakvimSayfasi extends StatelessWidget {
               ),
               // Skor Kutusu
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 28, vertical: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -206,10 +371,9 @@ class TakvimSayfasi extends StatelessWidget {
               // Rakip
               Column(
                 children: [
-                  Image.network(rakipLogo, height: 50),
+                  _buildTeamLogo(rakipLogo, rakip),
                   const SizedBox(height: 6),
-                  Text(rakip,
-                      style: const TextStyle(color: Colors.white)),
+                  Text(rakip, style: const TextStyle(color: Colors.white)),
                 ],
               ),
             ],
@@ -217,17 +381,87 @@ class TakvimSayfasi extends StatelessWidget {
           const SizedBox(height: 8),
 
           // Durum veya Saat
-          match['durum'] == "Yaklaşan"
+          durum == "Yaklaşan"
               ? Text(saat,
-              style: const TextStyle(
-                  fontSize: 16, color: Colors.white))
-              : Text(match['durum'] ?? '',
+              style: const TextStyle(fontSize: 16, color: Colors.white))
+              : Text(durum,
               style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.white)),
         ],
       ),
+    );
+  }
+
+  // ✅ Takım logosu güvenli widget'ı
+  Widget _buildTeamLogo(String logoUrl, String teamName) {
+    // Eğer logo URL'i boş ise placeholder göster
+    if (logoUrl.isEmpty) {
+      return Container(
+        height: 50,
+        width: 50,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(
+          Icons.sports_soccer,
+          size: 30,
+          color: Colors.grey,
+        ),
+      );
+    }
+
+    return Image.network(
+      logoUrl,
+      height: 50,
+      width: 50,
+      fit: BoxFit.contain,
+      // ✅ Hata durumunda placeholder
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          height: 50,
+          width: 50,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.broken_image,
+                size: 20,
+                color: Colors.grey,
+              ),
+              Text(
+                teamName.length > 3 ? teamName.substring(0, 3) : teamName,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      // ✅ Yükleme durumunda loading
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          height: 50,
+          width: 50,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        );
+      },
     );
   }
 
@@ -261,40 +495,32 @@ class TakvimSayfasi extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () async {
+                // ✅ JSON validation
+                if (jsonController.text.trim().isEmpty) {
+                  _showErrorSnackBar(context, "JSON boş olamaz");
+                  return;
+                }
+
                 try {
                   final parsed = jsonDecode(jsonController.text);
 
                   if (parsed is List) {
                     for (var match in parsed) {
-                      final map = match as Map<String, dynamic>;
-                      final DateTime tarih = DateTime.parse(map['tarih']);
-                      map['tarih'] = Timestamp.fromDate(tarih);
-
-                      await FirebaseFirestore.instance
-                          .collection('fixture')
-                          .add(map);
+                      await _addMatchToFirestore(match, context);
                     }
                   } else if (parsed is Map) {
-                    final map = parsed as Map<String, dynamic>;
-                    final DateTime tarih = DateTime.parse(map['tarih']);
-                    map['tarih'] = Timestamp.fromDate(tarih);
-
-                    await FirebaseFirestore.instance
-                        .collection('fixture')
-                        .add(map);
+                    await _addMatchToFirestore(parsed, context);
                   } else {
                     throw Exception("Geçersiz JSON formatı");
                   }
 
-                  if (ctx.mounted) Navigator.of(ctx).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Fixture eklendi ✅")),
-                  );
+                  if (ctx.mounted) {
+                    Navigator.of(ctx).pop();
+                    _showSuccessSnackBar(context, "Fixture eklendi ✅");
+                  }
                 } catch (e) {
-                  print("Hata: $e");
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Hata: $e")),
-                  );
+                  print("JSON Hata: $e");
+                  _showErrorSnackBar(context, "JSON format hatası: $e");
                 }
               },
               child: const Text("Kaydet"),
@@ -302,6 +528,48 @@ class TakvimSayfasi extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  // ✅ Firestore ekleme işlemi ayrı metod
+  Future<void> _addMatchToFirestore(dynamic match, BuildContext context) async {
+    try {
+      final map = match as Map<String, dynamic>;
+
+      // ✅ Tarih validation
+      if (map['tarih'] == null) {
+        throw Exception("Tarih alanı zorunlu");
+      }
+
+      final DateTime tarih = DateTime.parse(map['tarih']);
+      map['tarih'] = Timestamp.fromDate(tarih);
+
+      await FirebaseFirestore.instance.collection('fixture').add(map);
+    } catch (e) {
+      print("Firestore Hata: $e");
+      throw Exception("Veritabanı hatası: $e");
+    }
+  }
+
+  // ✅ Hata mesajı gösterme
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // ✅ Başarı mesajı gösterme
+  void _showSuccessSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }

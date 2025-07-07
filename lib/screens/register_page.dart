@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'main_screen.dart';
+import '../widgets/custom_app_bar.dart'; // ✅ Import ekleyin
+
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -124,10 +126,8 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Kayıt Ol"),
-        backgroundColor: const Color(0xFF00913C),
-        foregroundColor: Colors.white,
+      appBar: const CustomAppBar(
+        title: "Kayıt Ol",
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
