@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart'; // ✅ YENİ EKLEME
 import '../services/google_signin_service.dart';
+import '../services/theme_service.dart'; // ✅ YENİ EKLEME
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -36,10 +39,8 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   }
 
   Future<void> signOut() async {
-    // Haptic feedback
     HapticFeedback.mediumImpact();
 
-    // Modern çıkış onayı
     bool? shouldSignOut = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -185,7 +186,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       final providerId = user!.providerData.first.providerId;
       switch (providerId) {
         case 'google.com':
-          return Icons.account_circle; // Google ikonu yerine
+          return Icons.account_circle;
         case 'password':
           return Icons.email;
         default:
@@ -360,6 +361,29 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
                           // Account info cards
                           ..._buildInfoCards(),
+
+                          const SizedBox(height: 16),
+
+                          // ✅ TEMA KARTI - YENİ EKLEME!
+                          Consumer<ThemeService>(
+                            builder: (context, themeService, child) {
+                              return _InfoCard(
+                                icon: themeService.isDarkMode
+                                    ? Icons.light_mode
+                                    : Icons.dark_mode,
+                                title: "Tema",
+                                value: themeService.isDarkMode ? "Koyu Tema" : "Açık Tema",
+                                trailing: Switch(
+                                  value: themeService.isDarkMode,
+                                  onChanged: (value) {
+                                    themeService.toggleTheme();
+                                    HapticFeedback.lightImpact();
+                                  },
+                                  activeColor: const Color(0xFF00913C),
+                                ),
+                              );
+                            },
+                          ),
 
                           const SizedBox(height: 24),
 

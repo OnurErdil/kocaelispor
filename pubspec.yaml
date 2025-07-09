@@ -15,6 +15,7 @@ dependencies:
   google_sign_in: ^6.1.5
   font_awesome_flutter: ^10.8.0  # ✅ profile_page için gerekli
   cupertino_icons: ^1.0.8
+  provider: ^6.1.1  # ✅ YENİ EKLEME
 
 dev_dependencies:
   flutter_test:

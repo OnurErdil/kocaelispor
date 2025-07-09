@@ -1,11 +1,11 @@
-// lib/main.dart
+// lib/main.dart - THEME SERVİSİ İLE GÜNCELLENMİŞ
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart'; // ✅ YENİ EKLEME
 import 'firebase_options.dart';
-import 'screens/main_screen.dart';
-import 'screens/login_page.dart';
-import 'theme/app_theme.dart'; // ✅ YENİ TEMA
+import 'screens/splash_screen.dart';
+import 'theme/app_theme.dart';
+import 'services/theme_service.dart'; // ✅ YENİ EKLEME
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,28 +20,20 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Kocaelispor Fan App',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme, // ✅ TUTARLı TEMA
-      home: const AuthWrapper(),
+    return ChangeNotifierProvider(
+      create: (context) => ThemeService(),
+      child: Consumer<ThemeService>(
+        builder: (context, themeService, child) {
+          return MaterialApp(
+            title: 'Kocaelispor Fan App',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme, // ✅ AÇIK TEMA
+            darkTheme: AppTheme.darkTheme, // ✅ KOYU TEMA
+            themeMode: themeService.themeMode, // ✅ DİNAMİK TEMA
+            home: const SplashScreen(),
+          );
+        },
+      ),
     );
-  }
-}
-
-// AuthWrapper aynı kalır...
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      return const MainScreen(); // Oturum varsa direkt MainScreen
-    } else {
-      return const LoginPage(); // 💚 DOĞRU // const yok!
-
-    }
   }
 }
