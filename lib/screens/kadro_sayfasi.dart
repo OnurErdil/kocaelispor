@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../widgets/custom_app_bar.dart'; // ✅ Import ekleyin
+import '../widgets/custom_app_bar.dart';
+import 'foto_detay_sayfasi.dart'; // ✅ YENİ IMPORT
 
 // Constants için ayrı dosya oluşturmanız önerilir
 class AppColors {
@@ -129,30 +130,46 @@ class PlayerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, AppColors.primaryDark],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
+      child: GestureDetector( // ✅ TIKLANMA ÖZELLİĞİ EKLENDİ
+        onTap: () {
+          // Foto detay sayfasına git
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FotoDetaySayfasi(
+                fotoUrl: oyuncu['fotoUrl'] ?? 'https://via.placeholder.com/300',
+                oyuncuAdi: oyuncu['isim'] ?? 'Bilinmeyen',
+                pozisyon: oyuncu['pozisyon'] ?? 'Pozisyon Yok',
+                formaNo: oyuncu['formaNo'] ?? 0,
+              ),
             ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _buildPlayerAvatar(),
-            _buildPlayerInfo(),
-            if (isAdmin) _buildAdminMenu(context),
-            const SizedBox(width: 12),
-          ],
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildPlayerAvatar(),
+              _buildPlayerInfo(),
+              if (isAdmin) _buildAdminMenu(context),
+              const SizedBox(width: 12),
+            ],
+          ),
         ),
       ),
     );
@@ -164,14 +181,17 @@ class PlayerCard extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.all(12),
-          child: CircleAvatar(
-            radius: 30,
-            backgroundImage: NetworkImage(
-              oyuncu['fotoUrl'] ?? 'https://via.placeholder.com/150',
+          child: Hero( // ✅ HERO ANİMASYONU EKLENDİ
+            tag: 'oyuncu_foto_${oyuncu['formaNo'] ?? 0}',
+            child: CircleAvatar(
+              radius: 30,
+              backgroundImage: NetworkImage(
+                oyuncu['fotoUrl'] ?? 'https://via.placeholder.com/150',
+              ),
+              onBackgroundImageError: (exception, stackTrace) {
+                // Hata durumunda placeholder göster
+              },
             ),
-            onBackgroundImageError: (exception, stackTrace) {
-              // Hata durumunda placeholder göster
-            },
           ),
         ),
         // Forma numarası

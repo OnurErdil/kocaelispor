@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/custom_app_bar.dart';
 import '../models/foto_model.dart';
 import '../theme/app_theme.dart';
-import 'foto_detay_sayfasi.dart';
+import 'foto_detay_sayfasi.dart'; // Bu satırı dosyanın üstüne ekleyin
 
 class GaleriSayfasi extends StatefulWidget {
   const GaleriSayfasi({super.key});
@@ -181,7 +181,12 @@ class _GaleriSayfasiState extends State<GaleriSayfasi> with SingleTickerProvider
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => FotoDetaySayfasi(foto: foto),
+              builder: (_) => FotoDetaySayfasi(
+                fotoUrl: foto.toString(), // Geçici çözüm
+                oyuncuAdi: 'Galeri Fotoğrafı',
+                pozisyon: 'Kocaelispor',
+                formaNo: 0,
+              ),
             ),
           );
         },
