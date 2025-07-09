@@ -5,6 +5,10 @@ class AppTheme {
   // Kocaelispor renkleri
   static const Color primaryGreen = Color(0xFF00913C);
   static const Color primaryDark = Color(0xFF006B2F);
+  static const Color darkGreen = Color(0xFF004A20); // ✅ EKLENDİ
+  static const Color background = Color(0xFF0F0F0F);
+  static const Color surface = Color(0xFF1A1A1A);
+  static const Color cardColor = Color(0xFF2D2D2D);
 
   // Dark theme renkleri
   static const Color darkBackground = Color(0xFF0F0F0F);

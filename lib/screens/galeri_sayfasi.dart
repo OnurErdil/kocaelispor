@@ -182,9 +182,9 @@ class _GaleriSayfasiState extends State<GaleriSayfasi> with SingleTickerProvider
             context,
             MaterialPageRoute(
               builder: (_) => FotoDetaySayfasi(
-                fotoUrl: foto.toString(), // Geçici çözüm
-                oyuncuAdi: 'Galeri Fotoğrafı',
-                pozisyon: 'Kocaelispor',
+                fotoUrl: foto.url,
+                oyuncuAdi: foto.baslik,
+                pozisyon: foto.kategori,
                 formaNo: 0,
               ),
             ),
