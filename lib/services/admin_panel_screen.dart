@@ -110,32 +110,35 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
           const SizedBox(width: 8),
           Expanded(child: _buildStatCard('Oyuncu', _stats['totalPlayers'] ?? 0, Icons.sports, Colors.orange)),
           const SizedBox(width: 8),
-          Expanded(child: _buildStatCard('Maç', _stats['totalMatches'] ?? 0, Icons.event, Colors.red)),
+          Expanded(child: _buildStatCard('Maç', _stats['totalMatches'] ?? 0, Icons.sports_soccer, Colors.red)),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard(String label, int value, IconData icon, Color color) {
+  Widget _buildStatCard(String title, int value, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
             Text(
-              '$value',
+              value.toString(),
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
             Text(
-              label,
-              style: const TextStyle(fontSize: 10),
-              textAlign: TextAlign.center,
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
             ),
           ],
         ),
@@ -149,16 +152,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Hızlı eylemler
           _buildQuickActionsCard(),
           const SizedBox(height: 16),
-
-          // Son aktiviteler
           _buildRecentActivitiesCard(),
-          const SizedBox(height: 16),
-
-          // Sistem durumu
-          _buildSystemStatusCard(),
         ],
       ),
     );
@@ -172,7 +168,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Hızlı Eylemler',
+              'Hızlı İşlemler',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
@@ -180,14 +176,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 2.5,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 3,
               children: [
-                _buildQuickActionButton('Haber Ekle', Icons.add_box, () => _showAddNewsDialog()),
-                _buildQuickActionButton('Oyuncu Ekle', Icons.person_add, () => _showAddPlayerDialog()),
-                _buildQuickActionButton('Maç Ekle', Icons.add_circle, () => _showAddMatchDialog()),
-                _buildQuickActionButton('Admin Yap', Icons.admin_panel_settings, () => _showMakeAdminDialog()),
+                _buildActionButton('Admin Yap', Icons.admin_panel_settings, _showMakeAdminDialog),
+                _buildActionButton('Haber Ekle', Icons.article, _showAddNewsDialog),
+                _buildActionButton('Oyuncu Ekle', Icons.person_add, _showAddPlayerDialog),
+                _buildActionButton('Maç Ekle', Icons.add_circle, _showAddMatchDialog),
               ],
             ),
           ],
@@ -196,26 +192,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
     );
   }
 
-  Widget _buildQuickActionButton(String title, IconData icon, VoidCallback onTap) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            children: [
-              Icon(icon, color: AppTheme.primaryGreen),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-        ),
+  Widget _buildActionButton(String title, IconData icon, VoidCallback onPressed) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(title, style: const TextStyle(fontSize: 12)),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
     );
   }
@@ -244,7 +227,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 }
 
                 if (snapshot.data!.docs.isEmpty) {
-                  return const Text('Henüz aktivite yok');
+                  return const Center(child: Text('Henüz aktivite yok'));
                 }
 
                 return Column(
@@ -264,8 +247,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                         '${data['adminEmail'] ?? 'Bilinmeyen'} - $dateStr',
                         style: const TextStyle(fontSize: 12),
                       ),
-                      trailing: Icon(
-                        _getActionIcon(data['action']),
+                      trailing: const Icon(
+                        Icons.admin_panel_settings,
                         size: 16,
                         color: Colors.grey,
                       ),
@@ -276,52 +259,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSystemStatusCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Sistem Durumu',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _buildStatusItem('Firestore Bağlantısı', true),
-            _buildStatusItem('Authentication', true),
-            _buildStatusItem('Admin Servisleri', true),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusItem(String title, bool isOnline) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(
-            isOnline ? Icons.check_circle : Icons.error,
-            color: isOnline ? Colors.green : Colors.red,
-            size: 16,
-          ),
-          const SizedBox(width: 8),
-          Text(title),
-          const Spacer(),
-          Text(
-            isOnline ? 'Aktif' : 'Çevrimdışı',
-            style: TextStyle(
-              color: isOnline ? Colors.green : Colors.red,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -353,39 +290,32 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 ),
                 title: Text(data['displayName'] ?? 'İsim yok'),
                 subtitle: Text(data['email'] ?? 'E-posta yok'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                trailing: PopupMenuButton(
+                  itemBuilder: (context) => [
+                    if (data['isAdmin'] != true)
+                      const PopupMenuItem(
+                        value: 'make_admin',
+                        child: Row(
+                          children: [
+                            Icon(Icons.admin_panel_settings),
+                            SizedBox(width: 8),
+                            Text('Admin Yap'),
+                          ],
+                        ),
+                      ),
                     if (data['isAdmin'] == true)
-                      const Icon(Icons.admin_panel_settings, color: Colors.orange),
-                    PopupMenuButton(
-                      itemBuilder: (context) => [
-                        if (data['isAdmin'] != true)
-                          PopupMenuItem(
-                            value: 'make_admin',
-                            child: const Row(
-                              children: [
-                                Icon(Icons.admin_panel_settings),
-                                SizedBox(width: 8),
-                                Text('Admin Yap'),
-                              ],
-                            ),
-                          ),
-                        if (data['isAdmin'] == true)
-                          PopupMenuItem(
-                            value: 'remove_admin',
-                            child: const Row(
-                              children: [
-                                Icon(Icons.remove_moderator),
-                                SizedBox(width: 8),
-                                Text('Admin Kaldır'),
-                              ],
-                            ),
-                          ),
-                      ],
-                      onSelected: (value) => _handleUserAction(value.toString(), data),
-                    ),
+                      const PopupMenuItem(
+                        value: 'remove_admin',
+                        child: Row(
+                          children: [
+                            Icon(Icons.remove_moderator, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Admin Yetkisini Kaldır', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
                   ],
+                  onSelected: (value) => _handleUserAction(value.toString(), data),
                 ),
               ),
             );
@@ -397,10 +327,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
 
   Widget _buildNewsTab() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('haberler')
-          .orderBy('tarih', descending: true)
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('haberler').snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -412,26 +339,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
           itemBuilder: (context, index) {
             final doc = snapshot.data!.docs[index];
             final data = doc.data() as Map<String, dynamic>;
-            final timestamp = data['tarih'] as Timestamp?;
 
             return Card(
               child: ListTile(
+                leading: data['resimUrl'] != null
+                    ? Image.network(data['resimUrl'], width: 60, height: 60, fit: BoxFit.cover)
+                    : const Icon(Icons.article),
                 title: Text(data['baslik'] ?? 'Başlık yok'),
-                subtitle: Text(
-                  timestamp?.toDate().toString().split(' ')[0] ?? 'Tarih yok',
-                ),
+                subtitle: Text(data['aciklama'] ?? 'Açıklama yok'),
                 trailing: PopupMenuButton(
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit),
-                          SizedBox(width: 8),
-                          Text('Düzenle'),
-                        ],
-                      ),
-                    ),
                     const PopupMenuItem(
                       value: 'delete',
                       child: Row(
@@ -455,10 +372,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
 
   Widget _buildPlayersTab() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('Takım')
-          .orderBy('formaNo')
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('oyuncular').snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -485,16 +399,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
                 subtitle: Text('${data['pozisyon'] ?? 'Pozisyon yok'} - Forma: ${data['formaNo'] ?? '?'}'),
                 trailing: PopupMenuButton(
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit),
-                          SizedBox(width: 8),
-                          Text('Düzenle'),
-                        ],
-                      ),
-                    ),
                     const PopupMenuItem(
                       value: 'delete',
                       child: Row(
@@ -633,7 +537,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         final confirm = await _showConfirmDialog('Bu oyuncuyu silmek istediğinizden emin misiniz?');
         if (confirm) {
           try {
-            await FirebaseFirestore.instance.collection('Takım').doc(playerId).delete();
+            await FirebaseFirestore.instance.collection('oyuncular').doc(playerId).delete();
             await AdminService.logAdminActivity(
               action: 'PLAYER_DELETED',
               targetType: 'PLAYER',
@@ -666,21 +570,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
         ],
       ),
     ) ?? false;
-  }
-
-  void _showAddNewsDialog() {
-    // News ekleme dialog'u buraya gelecek
-    _showErrorSnackBar('Haber ekleme özelliği yakında eklenecek');
-  }
-
-  void _showAddPlayerDialog() {
-    // Player ekleme dialog'u buraya gelecek
-    _showErrorSnackBar('Oyuncu ekleme özelliği yakında eklenecek');
-  }
-
-  void _showAddMatchDialog() {
-    // Maç ekleme dialog'u buraya gelecek
-    _showErrorSnackBar('Maç ekleme özelliği yakında eklenecek');
   }
 
   void _showMakeAdminDialog() {
@@ -723,6 +612,34 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
               }
             },
             child: const Text('Admin Yap'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddNewsDialog() {
+    _showComingSoonDialog('Haber Ekleme');
+  }
+
+  void _showAddPlayerDialog() {
+    _showComingSoonDialog('Oyuncu Ekleme');
+  }
+
+  void _showAddMatchDialog() {
+    _showComingSoonDialog('Maç Ekleme');
+  }
+
+  void _showComingSoonDialog(String feature) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(feature),
+        content: Text('$feature özelliği yakında eklenecek!'),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
           ),
         ],
       ),

@@ -1,6 +1,6 @@
 // lib/widgets/analytics_wrapper.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_analytics/firebase_analytics.dart'; // ✅ Firebase Analytics import eklendi
+import 'package:firebase_analytics/firebase_analytics.dart';
 import '../services/analytics_service.dart';
 
 /// Analytics takibi için widget wrapper
@@ -66,7 +66,6 @@ class _AnalyticsWrapperState extends State<AnalyticsWrapper>
         }
         break;
       case AppLifecycleState.inactive:
-      // Geçici durumlar için bir şey yapmıyoruz
         break;
     }
   }
@@ -134,7 +133,7 @@ class AnalyticsHelper {
     String? category,
     Map<String, dynamic>? parameters,
   }) {
-    return () {
+    return () async {  // ✅ async eklendi
       try {
         // Analytics eventi kaydet
         final analytics = AnalyticsService.analytics;
@@ -164,7 +163,7 @@ class AnalyticsHelper {
     required String formName,
     Map<String, dynamic>? formData,
   }) {
-    return () {
+    return () async {  // ✅ async eklendi
       try {
         // Form submit eventi kaydet
         final analytics = AnalyticsService.analytics;
@@ -195,7 +194,7 @@ class AnalyticsHelper {
     int? itemIndex,
     Map<String, dynamic>? itemData,
   }) {
-    return () {
+    return () async {  // ✅ async eklendi
       try {
         // List item tap eventi kaydet
         final analytics = AnalyticsService.analytics;
@@ -239,7 +238,7 @@ class AnalyticsHelper {
     required String featureName,
     String? action,
     Map<String, dynamic>? parameters,
-  }) {
+  }) async {  // ✅ async eklendi
     try {
       // Feature usage kaydet
       final analytics = AnalyticsService.analytics;
@@ -345,5 +344,3 @@ extension AnalyticsButtonExtension on VoidCallback {
     );
   }
 }
-
-// AnalyticsService'e erişim için helper sınıfı kaldırıldı - artık gerekli değilrişim için helper sınıfı kaldırıldı - artık gerekli değil

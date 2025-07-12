@@ -11,23 +11,20 @@ import 'screens/login_page.dart';
 import 'theme/app_theme.dart';
 import 'services/notification_service.dart';
 import 'services/analytics_service.dart';
-import 'services/performance_service.dart'; // ✅ YENİ EKLEME
-import 'services/database_optimizer.dart'; // ✅ YENİ EKLEME
-import 'providers/theme_provider.dart';
-import 'providers/language_provider.dart';
-import 'widgets/loading_states.dart'; // ✅ YENİ EKLEME
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'provider/theme_provider.dart';  // ✅ Doğru path
+import 'provider/language_provider.dart';  // ✅ Doğru path
+import 'l10n/app_localizations.dart';  // ✅ Manuel import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ System UI optimizations
+  // System UI optimizations
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  // ✅ System UI style
+  // System UI style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -41,13 +38,17 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // ✅ Servisleri paralel başlat (performance için)
-  await Future.wait([
-    PerformanceService.initialize(),
-    DatabaseOptimizer.initialize(),
-    NotificationService.initialize(),
-    AnalyticsService.initialize(),
-  ]);
+  // Servisleri başlat
+  try {
+    await Future.wait([
+      AnalyticsService.initialize(),
+      NotificationService.initialize(), // ✅ Artık çalışacak
+    ]);
+    print("✅ Tüm servisler başarıyla başlatıldı!");
+  } catch (e) {
+    print("⚠️ Bazı servisler başlatılamadı: $e");
+    // Uygulama yine de devam etsin
+  }
 
   // Provider'ları başlat
   final themeProvider = ThemeProvider();
@@ -55,9 +56,6 @@ void main() async {
 
   final languageProvider = LanguageProvider();
   await languageProvider.initialize();
-
-  // ✅ App startup trace'ini tamamla
-  await PerformanceService.completeAppStartup();
 
   runApp(MyApp(
     themeProvider: themeProvider,
@@ -85,69 +83,42 @@ class MyApp extends StatelessWidget {
       child: Consumer2<ThemeProvider, LanguageProvider>(
         builder: (context, themeProvider, languageProvider, child) {
           return MaterialApp(
-            title: 'Kocaelispor Fan App',
+            title: 'Kocaelispor 1966',
             debugShowCheckedModeBanner: false,
 
-            // ✅ Performance optimizations
-            checkerboardRasterCacheImages: false,
-            checkerboardOffscreenLayers: false,
-            showPerformanceOverlay: false, // Production'da false olmalı
-
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: _convertThemeMode(themeProvider.themeMode),
-
-            locale: languageProvider.currentLocale,
+            // ✅ Localization ayarları
             localizationsDelegates: const [
-              AppLocalizations.delegate,
+              AppLocalizations.delegate,  // ✅ Bizim localizations
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            supportedLocales: LanguageProvider.supportedLocales,
+            supportedLocales: const [
+              Locale('tr', 'TR'),  // Türkçe
+              Locale('en', 'US'),  // İngilizce
+            ],
+            locale: languageProvider.currentLocale,  // ✅ Dinamik dil
 
+            // ✅ Tema ayarları
+            themeMode: themeProvider.flutterThemeMode,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+
+            // ✅ Başlangıç ekranı
             home: const AuthWrapper(),
+
+            // ✅ Navigator observer (analytics için)
             navigatorObservers: [
               AnalyticsService.observer,
             ],
-
-            // ✅ Builder wrapper for performance monitoring
-            builder: (context, child) {
-              // Global error boundary
-              return _AppErrorBoundary(child: child ?? const SizedBox());
-            },
           );
         },
       ),
     );
   }
-
-  ThemeMode _convertThemeMode(providers.ThemeMode providerThemeMode) {
-    switch (providerThemeMode) {
-      case providers.ThemeMode.light:
-        return ThemeMode.light;
-      case providers.ThemeMode.dark:
-        return ThemeMode.dark;
-      case providers.ThemeMode.system:
-        return ThemeMode.system;
-    }
-  }
 }
 
-import 'providers/theme_provider.dart' as providers;
-
-// ✅ Global error boundary
-class _AppErrorBoundary extends StatelessWidget {
-  final Widget child;
-
-  const _AppErrorBoundary({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return child;
-  }
-}
-
+// Auth kontrol wrapper'ı
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -159,32 +130,17 @@ class AuthWrapper extends StatelessWidget {
         // Loading durumu
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: AppLoadingWidget(
-              message: "Kocaelispor Fan App Yükleniyor...",
-              size: 80,
+            body: Center(
+              child: CircularProgressIndicator(),
             ),
           );
         }
 
-        // Hata durumu
-        if (snapshot.hasError) {
-          return Scaffold(
-            body: AppErrorWidget(
-              message: "Bağlantı hatası oluştu. Lütfen tekrar deneyin.",
-              onRetry: () {
-                // Auth stream'i yeniden başlat
-                FirebaseAuth.instance.authStateChanges();
-              },
-            ),
-          );
-        }
-
-        // Kullanıcı durumuna göre yönlendirme
+        // Kullanıcı giriş yapmış mı kontrol et
         if (snapshot.hasData && snapshot.data != null) {
-          AnalyticsService.setUserId(snapshot.data!.uid);
-          return const MainScreen();
+          return const MainScreen();  // Ana ekran
         } else {
-          return const LoginPage();
+          return const LoginPage();   // Giriş ekranı
         }
       },
     );

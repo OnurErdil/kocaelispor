@@ -2,261 +2,154 @@
   "@@locale": "tr",
   "appTitle": "Kocaelispor Fan App",
   "@appTitle": {
-    "description": "Uygulamanın ana başlığı"
+    "description": "Uygulama başlığı"
   },
-
   "welcome": "Hoş Geldiniz",
   "@welcome": {
-    "description": "Hoş geldin mesajı"
+    "description": "Karşılama mesajı"
   },
-
   "login": "Giriş Yap",
   "@login": {
-    "description": "Giriş yap butonu"
+    "description": "Giriş butonu"
   },
-
   "register": "Kayıt Ol",
   "@register": {
-    "description": "Kayıt ol butonu"
+    "description": "Kayıt butonu"
   },
-
   "email": "E-posta",
   "@email": {
-    "description": "E-posta etiketi"
+    "description": "E-posta alanı"
   },
-
   "password": "Şifre",
   "@password": {
-    "description": "Şifre etiketi"
+    "description": "Şifre alanı"
   },
-
   "confirmPassword": "Şifre Tekrar",
   "@confirmPassword": {
-    "description": "Şifre tekrar etiketi"
+    "description": "Şifre onay alanı"
   },
-
   "forgotPassword": "Şifremi Unuttum",
   "@forgotPassword": {
-    "description": "Şifremi unuttum linki"
+    "description": "Şifre unutma linki"
   },
-
   "googleSignIn": "Google ile Giriş",
   "@googleSignIn": {
-    "description": "Google ile giriş butonu"
+    "description": "Google giriş butonu"
   },
-
   "or": "veya",
   "@or": {
-    "description": "Veya ayırıcı metni"
+    "description": "Veya bağlacı"
   },
-
-  "dontHaveAccount": "Hesabınız yok mu?",
-  "@dontHaveAccount": {
-    "description": "Hesabınız yok mu metni"
-  },
-
-  "alreadyHaveAccount": "Şifrenizi hatırladınız mı?",
-  "@alreadyHaveAccount": {
-    "description": "Zaten hesabınız var mı metni"
-  },
-
   "homeTab": "Ana Sayfa",
   "@homeTab": {
-    "description": "Ana sayfa tab başlığı"
+    "description": "Ana sayfa tab"
   },
-
   "teamTab": "Kadro",
   "@teamTab": {
-    "description": "Kadro tab başlığı"
+    "description": "Kadro tab"
   },
-
   "fixtureTab": "Takvim",
   "@fixtureTab": {
-    "description": "Takvim tab başlığı"
+    "description": "Takvim tab"
   },
-
   "profileTab": "Profil",
   "@profileTab": {
-    "description": "Profil tab başlığı"
+    "description": "Profil tab"
   },
-
   "teamRoster": "Takım Kadrosu",
   "@teamRoster": {
     "description": "Takım kadrosu başlığı"
   },
-
   "fixtureResults": "Fikstür & Takvim",
   "@fixtureResults": {
-    "description": "Fikstür ve takvim başlığı"
+    "description": "Fikstür başlığı"
   },
-
   "standings": "Puan Durumu",
   "@standings": {
     "description": "Puan durumu başlığı"
   },
-
   "notifications": "Bildiriler",
   "@notifications": {
     "description": "Bildirimler başlığı"
   },
-
-  "notificationSettings": "Bildirim Ayarları",
-  "@notificationSettings": {
-    "description": "Bildirim ayarları başlığı"
+  "settings": "Ayarlar",
+  "@settings": {
+    "description": "Ayarlar başlığı"
   },
-
   "themeSettings": "Tema Ayarları",
   "@themeSettings": {
-    "description": "Tema ayarları başlığı"
+    "description": "Tema ayarları"
   },
-
   "languageSettings": "Dil Ayarları",
   "@languageSettings": {
-    "description": "Dil ayarları başlığı"
+    "description": "Dil ayarları"
   },
-
   "lightTheme": "Açık Tema",
   "@lightTheme": {
-    "description": "Açık tema seçeneği"
+    "description": "Açık tema"
   },
-
   "darkTheme": "Koyu Tema",
   "@darkTheme": {
-    "description": "Koyu tema seçeneği"
+    "description": "Koyu tema"
   },
-
   "systemTheme": "Sistem Teması",
   "@systemTheme": {
-    "description": "Sistem teması seçeneği"
+    "description": "Sistem teması"
   },
-
   "turkish": "Türkçe",
   "@turkish": {
-    "description": "Türkçe dil seçeneği"
+    "description": "Türkçe dil"
   },
-
   "english": "İngilizce",
   "@english": {
-    "description": "İngilizce dil seçeneği"
+    "description": "İngilizce dil"
   },
-
-  "matchNotifications": "Maç Bildirimleri",
-  "@matchNotifications": {
-    "description": "Maç bildirimleri"
-  },
-
-  "newsNotifications": "Haber Bildirimleri",
-  "@newsNotifications": {
-    "description": "Haber bildirimleri"
-  },
-
-  "generalNotifications": "Genel Bildirimler",
-  "@generalNotifications": {
-    "description": "Genel bildirimler"
-  },
-
   "save": "Kaydet",
   "@save": {
     "description": "Kaydet butonu"
   },
-
   "cancel": "İptal",
   "@cancel": {
     "description": "İptal butonu"
   },
-
   "delete": "Sil",
   "@delete": {
     "description": "Sil butonu"
   },
-
   "edit": "Düzenle",
   "@edit": {
     "description": "Düzenle butonu"
   },
-
   "add": "Ekle",
   "@add": {
     "description": "Ekle butonu"
   },
-
   "logout": "Çıkış Yap",
   "@logout": {
-    "description": "Çıkış yap butonu"
+    "description": "Çıkış butonu"
   },
-
   "confirm": "Onayla",
   "@confirm": {
     "description": "Onayla butonu"
   },
-
   "loading": "Yükleniyor...",
   "@loading": {
     "description": "Yükleniyor mesajı"
   },
-
   "error": "Hata",
   "@error": {
     "description": "Hata mesajı"
   },
-
   "success": "Başarılı",
   "@success": {
     "description": "Başarı mesajı"
   },
-
   "noDataFound": "Veri bulunamadı",
   "@noDataFound": {
     "description": "Veri bulunamadı mesajı"
   },
-
   "tryAgain": "Tekrar Dene",
   "@tryAgain": {
     "description": "Tekrar dene butonu"
-  },
-
-  "player": "Oyuncu",
-  "@player": {
-    "description": "Oyuncu"
-  },
-
-  "position": "Pozisyon",
-  "@position": {
-    "description": "Pozisyon"
-  },
-
-  "jerseyNumber": "Forma No",
-  "@jerseyNumber": {
-    "description": "Forma numarası"
-  },
-
-  "played": "O",
-  "@played": {
-    "description": "Oynanan maç sayısı"
-  },
-
-  "won": "G",
-  "@won": {
-    "description": "Galibiyet sayısı"
-  },
-
-  "draw": "B",
-  "@draw": {
-    "description": "Beraberlik sayısı"
-  },
-
-  "lost": "M",
-  "@lost": {
-    "description": "Mağlubiyet sayısı"
-  },
-
-  "points": "Puan",
-  "@points": {
-    "description": "Puan"
-  },
-
-  "goalDifference": "AV",
-  "@goalDifference": {
-    "description": "Averaj"
   }
 }

@@ -2,8 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import '../widgets/custom_app_bar.dart';
-import '../services/notification_service.dart'; // ✅ YENİ EKLEME
+import '../theme/app_theme.dart';
+import '../utils/notification_helper.dart';  // ✅ Yeni helper
 
 class ForumSayfasi extends StatefulWidget {
   const ForumSayfasi({super.key});
@@ -15,15 +17,23 @@ class ForumSayfasi extends StatefulWidget {
 class _ForumSayfasiState extends State<ForumSayfasi> {
   final TextEditingController _mesajController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  String? _lastMessageId; // ✅ Son mesaj ID'sini takip etmek için
+  String? _lastMessageId;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeLastMessage(); // ✅ İlk mesaj ID'sini al
+    _initializeLastMessage();
   }
 
-  // ✅ İlk mesaj ID'sini al
+  @override
+  void dispose() {
+    _mesajController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // İlk mesaj ID'sini al
   Future<void> _initializeLastMessage() async {
     try {
       final lastMessageDoc = await FirebaseFirestore.instance
@@ -47,11 +57,11 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mesaj göndermek için giriş yapmalısınız!')),
-      );
+      _showSnackBar('Mesaj göndermek için giriş yapmalısınız!', isError: true);
       return;
     }
+
+    setState(() => _isLoading = true);
 
     try {
       // Firestore'a mesaj kaydet
@@ -60,32 +70,68 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
         'gonderenId': user.uid,
         'gonderenAd': user.displayName ?? 'Kocaelispor Taraftarı',
         'gonderenEmail': user.email ?? '',
+        'gonderenFoto': user.photoURL,
         'tarih': FieldValue.serverTimestamp(),
+        'duzenlendiMi': false,
       });
 
       // Mesaj kutusunu temizle
       _mesajController.clear();
 
       // Başarı bildirimi göster
-      NotificationService.showSuccessNotification(
-        context,
-        message: 'Mesajınız gönderildi!',
-      );
+      _showSnackBar('Mesajınız gönderildi! ⚽', isError: false);
 
       // En alta kaydır
-      if (_scrollController.hasClients) {
+      _scrollToBottom();
+
+    } catch (e) {
+      print('Mesaj gönderme hatası: $e');
+      _showSnackBar('Mesaj gönderilemedi!', isError: true);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // SnackBar gösterme
+  void _showSnackBar(String message, {required bool isError}) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : AppTheme.primaryGreen,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: isError ? 4 : 2),
+      ),
+    );
+  }
+
+  // En alta kaydırma
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      Future.delayed(const Duration(milliseconds: 100), () {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent + 100,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
-      }
-    } catch (e) {
-      // Hata bildirimi göster
-      NotificationService.showErrorNotification(
-        context,
-        message: 'Mesaj gönderilemedi!',
-      );
+      });
+    }
+  }
+
+  // Saat formatı
+  String _saatFormatla(DateTime tarih) {
+    final now = DateTime.now();
+    final difference = now.difference(tarih);
+
+    if (difference.inDays > 0) {
+      return DateFormat('dd/MM HH:mm').format(tarih);
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} saat önce';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} dk önce';
+    } else {
+      return 'Şimdi';
     }
   }
 
@@ -112,7 +158,7 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00913C)),
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                         ),
                         SizedBox(height: 16),
                         Text('Mesajlar yükleniyor...'),
@@ -158,7 +204,7 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
                         ),
                         SizedBox(height: 8),
                         Text(
-                          'İlk mesajı sen yaz!',
+                          'İlk mesajı sen yaz! ⚽',
                           style: TextStyle(color: Colors.grey),
                         ),
                       ],
@@ -168,7 +214,7 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
 
                 final mesajlar = snapshot.data!.docs;
 
-                // ✅ Yeni mesaj kontrolü
+                // Yeni mesaj kontrolü (bildirim için)
                 if (mesajlar.isNotEmpty) {
                   final latestMessage = mesajlar.last;
                   final latestMessageId = latestMessage.id;
@@ -181,9 +227,9 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
                       latestMessageData['gonderenId'] != currentUser?.uid) {
 
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      NotificationService.showForumMessageNotification(
+                      NotificationHelper.showForumMessageNotification(
                         context,
-                        senderName: latestMessageData['gonderenAd'] ?? 'Anonim',
+                        senderName: latestMessageData['gonderenAd'] ?? 'Birisi',
                         message: latestMessageData['mesaj'] ?? '',
                       );
                     });
@@ -235,7 +281,7 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(25),
                           borderSide: const BorderSide(
-                            color: Color(0xFF00913C),
+                            color: AppTheme.primaryGreen,
                             width: 2,
                           ),
                         ),
@@ -243,20 +289,46 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
                           horizontal: 20,
                           vertical: 10,
                         ),
+                        suffixIcon: _isLoading
+                            ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                            ),
+                          ),
+                        )
+                            : null,
                       ),
                       maxLines: null,
+                      maxLength: 500, // Karakter limiti
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _mesajGonder(),
+                      enabled: !_isLoading,
                     ),
                   ),
                   const SizedBox(width: 12),
 
                   // Gönder butonu
                   FloatingActionButton(
-                    onPressed: _mesajGonder,
-                    backgroundColor: const Color(0xFF00913C),
+                    onPressed: _isLoading ? null : _mesajGonder,
+                    backgroundColor: _isLoading
+                        ? Colors.grey
+                        : AppTheme.primaryGreen,
                     mini: true,
-                    child: const Icon(
+                    child: _isLoading
+                        ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                        : const Icon(
                       Icons.send,
                       color: Colors.white,
                     ),
@@ -281,87 +353,119 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
       alignment: benimMesajim ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
-        ),
-        decoration: BoxDecoration(
-          color: benimMesajim
-              ? const Color(0xFF00913C)
-              : Colors.grey.shade200,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: benimMesajim ? const Radius.circular(16) : const Radius.circular(4),
-            bottomRight: benimMesajim ? const Radius.circular(4) : const Radius.circular(16),
-          ),
-        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: benimMesajim
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
-            // Gönderen adı (eğer başkasının mesajıysa)
+            // Kullanıcı adı (sadece başkalarının mesajları için)
             if (!benimMesajim)
               Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  mesajData['gonderenAd'] ?? 'Anonim Taraftar',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade600,
+                padding: const EdgeInsets.only(left: 12, bottom: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Profil resmi veya avatar
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundColor: AppTheme.primaryGreen,
+                      backgroundImage: mesajData['gonderenFoto'] != null
+                          ? NetworkImage(mesajData['gonderenFoto'])
+                          : null,
+                      child: mesajData['gonderenFoto'] == null
+                          ? Text(
+                        (mesajData['gonderenAd'] ?? '?')[0].toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                          : null,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      mesajData['gonderenAd'] ?? 'Anonim',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Mesaj balonu
+            Container(
+              padding: const EdgeInsets.all(12),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.7,
+              ),
+              decoration: BoxDecoration(
+                color: benimMesajim
+                    ? AppTheme.primaryGreen
+                    : Colors.grey.shade200,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(16),
+                  topRight: const Radius.circular(16),
+                  bottomLeft: benimMesajim
+                      ? const Radius.circular(16)
+                      : const Radius.circular(4),
+                  bottomRight: benimMesajim
+                      ? const Radius.circular(4)
+                      : const Radius.circular(16),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
                   ),
-                ),
+                ],
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Mesaj metni
+                  Text(
+                    mesajData['mesaj'] ?? '',
+                    style: TextStyle(
+                      color: benimMesajim ? Colors.white : Colors.black87,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
 
-            // Mesaj metni
-            Text(
-              mesajData['mesaj'] ?? '',
-              style: TextStyle(
-                fontSize: 16,
-                color: benimMesajim ? Colors.white : Colors.black87,
-              ),
-            ),
-
-            const SizedBox(height: 4),
-
-            // Saat
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Text(
-                saatMetni,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: benimMesajim
-                      ? Colors.white70
-                      : Colors.grey.shade600,
-                ),
+                  // Tarih ve saat
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        saatMetni,
+                        style: TextStyle(
+                          color: benimMesajim
+                              ? Colors.white70
+                              : Colors.grey[600],
+                          fontSize: 11,
+                        ),
+                      ),
+                      if (benimMesajim) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.check,
+                          size: 12,
+                          color: Colors.white70,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  // Saat formatını düzenleyen fonksiyon
-  String _saatFormatla(DateTime tarih) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final messageDate = DateTime(tarih.year, tarih.month, tarih.day);
-
-    if (messageDate == today) {
-      // Bugün ise sadece saat
-      return '${tarih.hour.toString().padLeft(2, '0')}:${tarih.minute.toString().padLeft(2, '0')}';
-    } else {
-      // Başka gün ise tarih ve saat
-      return '${tarih.day}/${tarih.month} ${tarih.hour.toString().padLeft(2, '0')}:${tarih.minute.toString().padLeft(2, '0')}';
-    }
-  }
-
-  @override
-  void dispose() {
-    _mesajController.dispose();
-    _scrollController.dispose();
-    super.dispose();
   }
 }

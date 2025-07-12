@@ -1,13 +1,12 @@
-// lib/providers/theme_provider.dart
+// lib/provider/theme_provider.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum ThemeMode { light, dark, system }
-
+// ✅ Flutter'ın ThemeMode'unu kullanıyoruz, kendi enum'umuzu kaldırdık
 class ThemeProvider extends ChangeNotifier {
   static const String _themeKey = 'theme_mode';
 
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.system; // ✅ Flutter'ın ThemeMode'unu kullan
   late SharedPreferences _prefs;
 
   ThemeMode get themeMode => _themeMode;
@@ -43,7 +42,9 @@ class ThemeProvider extends ChangeNotifier {
   // Temayı değiştir
   Future<void> setThemeMode(ThemeMode themeMode) async {
     _themeMode = themeMode;
-    await _prefs.setString(_themeKey, themeMode.toString().split('.').last);
+    // ✅ enum'un string değerini daha güvenli şekilde al
+    final themeString = themeMode.name; // .name kullanarak daha temiz
+    await _prefs.setString(_themeKey, themeString);
     notifyListeners();
     print("🎨 Tema değiştirildi: $themeMode");
   }
@@ -102,16 +103,46 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
-  // ✅ DÜZELTME: Flutter ThemeMode'a dönüştür
-  // MaterialApp.of yanlıştı, ThemeMode döndürmeliyiz
-  ThemeMode get flutterThemeMode {
-    switch (_themeMode) {
-      case ThemeMode.light:
-        return ThemeMode.light;
-      case ThemeMode.dark:
-        return ThemeMode.dark;
-      case ThemeMode.system:
-        return ThemeMode.system;
+  // ✅ Flutter ThemeMode'unu direkt döndür (gereksiz dönüştürme yok)
+  ThemeMode get flutterThemeMode => _themeMode;
+
+  // Tema renk paleti (koyu/açık tema için farklı renkler)
+  ColorScheme getColorScheme(BuildContext context) {
+    final isDark = isDarkMode(context);
+
+    if (isDark) {
+      return ColorScheme.dark(
+        primary: const Color(0xFF4CAF50), // Kocaelispor yeşili
+        secondary: const Color(0xFF81C784),
+        surface: const Color(0xFF121212),
+        background: const Color(0xFF121212),
+        error: Colors.red.shade400,
+      );
+    } else {
+      return ColorScheme.light(
+        primary: const Color(0xFF4CAF50), // Kocaelispor yeşili
+        secondary: const Color(0xFF66BB6A),
+        surface: Colors.white,
+        background: const Color(0xFFF5F5F5),
+        error: Colors.red.shade600,
+      );
     }
+  }
+
+  // Tema verilerini export et (settings sayfası için)
+  Map<String, dynamic> get themeInfo {
+    return {
+      'mode': _themeMode.name,
+      'description': themeDescription,
+      'icon': themeIcon,
+      'isSystem': isSystemMode,
+    };
+  }
+
+  // Tema istatistikleri (analytics için)
+  Future<void> logThemeChange() async {
+    print("📊 Tema değişikliği: ${_themeMode.name}");
+    // Burada analytics servisini çağırabilirsiniz
+    // AnalyticsService.logThemeChange(_themeMode.name);
   }
 }

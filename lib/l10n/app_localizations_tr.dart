@@ -39,12 +39,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get or => 'veya';
 
   @override
-  String get dontHaveAccount => 'Hesabınız yok mu?';
-
-  @override
-  String get alreadyHaveAccount => 'Şifrenizi hatırladınız mı?';
-
-  @override
   String get homeTab => 'Ana Sayfa';
 
   @override
@@ -69,7 +63,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get notifications => 'Bildiriler';
 
   @override
-  String get notificationSettings => 'Bildirim Ayarları';
+  String get settings => 'Ayarlar';
 
   @override
   String get themeSettings => 'Tema Ayarları';
@@ -91,15 +85,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get english => 'İngilizce';
-
-  @override
-  String get matchNotifications => 'Maç Bildirimleri';
-
-  @override
-  String get newsNotifications => 'Haber Bildirimleri';
-
-  @override
-  String get generalNotifications => 'Genel Bildirimler';
 
   @override
   String get save => 'Kaydet';
@@ -136,31 +121,4 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tryAgain => 'Tekrar Dene';
-
-  @override
-  String get player => 'Oyuncu';
-
-  @override
-  String get position => 'Pozisyon';
-
-  @override
-  String get jerseyNumber => 'Forma No';
-
-  @override
-  String get played => 'O';
-
-  @override
-  String get won => 'G';
-
-  @override
-  String get draw => 'B';
-
-  @override
-  String get lost => 'M';
-
-  @override
-  String get points => 'Puan';
-
-  @override
-  String get goalDifference => 'AV';
 }

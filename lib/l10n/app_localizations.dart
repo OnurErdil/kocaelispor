@@ -98,97 +98,85 @@ abstract class AppLocalizations {
     Locale('tr')
   ];
 
-  /// Uygulamanın ana başlığı
+  /// Uygulama başlığı
   ///
   /// In tr, this message translates to:
   /// **'Kocaelispor Fan App'**
   String get appTitle;
 
-  /// Hoş geldin mesajı
+  /// Karşılama mesajı
   ///
   /// In tr, this message translates to:
   /// **'Hoş Geldiniz'**
   String get welcome;
 
-  /// Giriş yap butonu
+  /// Giriş butonu
   ///
   /// In tr, this message translates to:
   /// **'Giriş Yap'**
   String get login;
 
-  /// Kayıt ol butonu
+  /// Kayıt butonu
   ///
   /// In tr, this message translates to:
   /// **'Kayıt Ol'**
   String get register;
 
-  /// E-posta etiketi
+  /// E-posta alanı
   ///
   /// In tr, this message translates to:
   /// **'E-posta'**
   String get email;
 
-  /// Şifre etiketi
+  /// Şifre alanı
   ///
   /// In tr, this message translates to:
   /// **'Şifre'**
   String get password;
 
-  /// Şifre tekrar etiketi
+  /// Şifre onay alanı
   ///
   /// In tr, this message translates to:
   /// **'Şifre Tekrar'**
   String get confirmPassword;
 
-  /// Şifremi unuttum linki
+  /// Şifre unutma linki
   ///
   /// In tr, this message translates to:
   /// **'Şifremi Unuttum'**
   String get forgotPassword;
 
-  /// Google ile giriş butonu
+  /// Google giriş butonu
   ///
   /// In tr, this message translates to:
   /// **'Google ile Giriş'**
   String get googleSignIn;
 
-  /// Veya ayırıcı metni
+  /// Veya bağlacı
   ///
   /// In tr, this message translates to:
   /// **'veya'**
   String get or;
 
-  /// Hesabınız yok mu metni
-  ///
-  /// In tr, this message translates to:
-  /// **'Hesabınız yok mu?'**
-  String get dontHaveAccount;
-
-  /// Zaten hesabınız var mı metni
-  ///
-  /// In tr, this message translates to:
-  /// **'Şifrenizi hatırladınız mı?'**
-  String get alreadyHaveAccount;
-
-  /// Ana sayfa tab başlığı
+  /// Ana sayfa tab
   ///
   /// In tr, this message translates to:
   /// **'Ana Sayfa'**
   String get homeTab;
 
-  /// Kadro tab başlığı
+  /// Kadro tab
   ///
   /// In tr, this message translates to:
   /// **'Kadro'**
   String get teamTab;
 
-  /// Takvim tab başlığı
+  /// Takvim tab
   ///
   /// In tr, this message translates to:
   /// **'Takvim'**
   String get fixtureTab;
 
-  /// Profil tab başlığı
+  /// Profil tab
   ///
   /// In tr, this message translates to:
   /// **'Profil'**
@@ -200,7 +188,7 @@ abstract class AppLocalizations {
   /// **'Takım Kadrosu'**
   String get teamRoster;
 
-  /// Fikstür ve takvim başlığı
+  /// Fikstür başlığı
   ///
   /// In tr, this message translates to:
   /// **'Fikstür & Takvim'**
@@ -218,71 +206,53 @@ abstract class AppLocalizations {
   /// **'Bildiriler'**
   String get notifications;
 
-  /// Bildirim ayarları başlığı
+  /// Ayarlar başlığı
   ///
   /// In tr, this message translates to:
-  /// **'Bildirim Ayarları'**
-  String get notificationSettings;
+  /// **'Ayarlar'**
+  String get settings;
 
-  /// Tema ayarları başlığı
+  /// Tema ayarları
   ///
   /// In tr, this message translates to:
   /// **'Tema Ayarları'**
   String get themeSettings;
 
-  /// Dil ayarları başlığı
+  /// Dil ayarları
   ///
   /// In tr, this message translates to:
   /// **'Dil Ayarları'**
   String get languageSettings;
 
-  /// Açık tema seçeneği
+  /// Açık tema
   ///
   /// In tr, this message translates to:
   /// **'Açık Tema'**
   String get lightTheme;
 
-  /// Koyu tema seçeneği
+  /// Koyu tema
   ///
   /// In tr, this message translates to:
   /// **'Koyu Tema'**
   String get darkTheme;
 
-  /// Sistem teması seçeneği
+  /// Sistem teması
   ///
   /// In tr, this message translates to:
   /// **'Sistem Teması'**
   String get systemTheme;
 
-  /// Türkçe dil seçeneği
+  /// Türkçe dil
   ///
   /// In tr, this message translates to:
   /// **'Türkçe'**
   String get turkish;
 
-  /// İngilizce dil seçeneği
+  /// İngilizce dil
   ///
   /// In tr, this message translates to:
   /// **'İngilizce'**
   String get english;
-
-  /// Maç bildirimleri
-  ///
-  /// In tr, this message translates to:
-  /// **'Maç Bildirimleri'**
-  String get matchNotifications;
-
-  /// Haber bildirimleri
-  ///
-  /// In tr, this message translates to:
-  /// **'Haber Bildirimleri'**
-  String get newsNotifications;
-
-  /// Genel bildirimler
-  ///
-  /// In tr, this message translates to:
-  /// **'Genel Bildirimler'**
-  String get generalNotifications;
 
   /// Kaydet butonu
   ///
@@ -314,7 +284,7 @@ abstract class AppLocalizations {
   /// **'Ekle'**
   String get add;
 
-  /// Çıkış yap butonu
+  /// Çıkış butonu
   ///
   /// In tr, this message translates to:
   /// **'Çıkış Yap'**
@@ -355,60 +325,6 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Tekrar Dene'**
   String get tryAgain;
-
-  /// Oyuncu
-  ///
-  /// In tr, this message translates to:
-  /// **'Oyuncu'**
-  String get player;
-
-  /// Pozisyon
-  ///
-  /// In tr, this message translates to:
-  /// **'Pozisyon'**
-  String get position;
-
-  /// Forma numarası
-  ///
-  /// In tr, this message translates to:
-  /// **'Forma No'**
-  String get jerseyNumber;
-
-  /// Oynanan maç sayısı
-  ///
-  /// In tr, this message translates to:
-  /// **'O'**
-  String get played;
-
-  /// Galibiyet sayısı
-  ///
-  /// In tr, this message translates to:
-  /// **'G'**
-  String get won;
-
-  /// Beraberlik sayısı
-  ///
-  /// In tr, this message translates to:
-  /// **'B'**
-  String get draw;
-
-  /// Mağlubiyet sayısı
-  ///
-  /// In tr, this message translates to:
-  /// **'M'**
-  String get lost;
-
-  /// Puan
-  ///
-  /// In tr, this message translates to:
-  /// **'Puan'**
-  String get points;
-
-  /// Averaj
-  ///
-  /// In tr, this message translates to:
-  /// **'AV'**
-  String get goalDifference;
 }
 
 class _AppLocalizationsDelegate

@@ -1,260 +1,306 @@
-// lib/services/analytics_service.dart
-import 'package:firebase_analytics/firebase_analytics.dart';
+// lib/services/admin_service.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class AnalyticsService {
-  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
-  static final FirebaseAnalyticsObserver observer =
-  FirebaseAnalyticsObserver(analytics: _analytics);
+class AdminService {
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Servis başlatma
-  static Future<void> initialize() async {
-    print("📊 Analytics Service başlatılıyor...");
+  // Kullanıcının admin olup olmadığını kontrol et
+  static Future<bool> isCurrentUserAdmin() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
 
-    // Kullanıcı ID'sini ayarla (giriş yapmışsa)
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await setUserId(user.uid);
-    }
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) return false;
 
-    // Uygulama açılış eventi
-    await logAppOpen();
-
-    print("✅ Analytics Service hazır!");
-  }
-
-  // Kullanıcı ID ayarla
-  static Future<void> setUserId(String userId) async {
-    await _analytics.setUserId(id: userId);
-    print("👤 Analytics User ID ayarlandı: $userId");
-  }
-
-  // Kullanıcı özelliklerini ayarla
-  static Future<void> setUserProperties({
-    String? userType,
-    String? preferredLanguage,
-    bool? isPremium,
-  }) async {
-    if (userType != null) {
-      await _analytics.setUserProperty(name: 'user_type', value: userType);
-    }
-    if (preferredLanguage != null) {
-      await _analytics.setUserProperty(name: 'preferred_language', value: preferredLanguage);
-    }
-    if (isPremium != null) {
-      await _analytics.setUserProperty(name: 'is_premium', value: isPremium.toString());
+      final userData = userDoc.data() as Map<String, dynamic>;
+      return userData['isAdmin'] == true;
+    } catch (e) {
+      print('Admin kontrolü hatası: $e');
+      return false;
     }
   }
 
-  // 📱 TEMEL EVENTLER
+  // Admin paneline erişim kontrolü (ek güvenlik)
+  static Future<bool> canAccessAdminPanel() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
 
-  // Uygulama açılışı
-  static Future<void> logAppOpen() async {
-    await _analytics.logAppOpen();
-    print("📱 Event: Uygulama açıldı");
-  }
+      // Email doğrulaması kontrolü
+      if (!user.emailVerified) {
+        print('E-posta doğrulanmamış: ${user.email}');
+        return false;
+      }
 
-  // Giriş yapma
-  static Future<void> logLogin(String method) async {
-    await _analytics.logLogin(loginMethod: method);
-    print("🔐 Event: Giriş yapıldı - $method");
-  }
+      // Admin kontrolü
+      final isAdmin = await isCurrentUserAdmin();
+      if (!isAdmin) {
+        print('Kullanıcı admin değil: ${user.email}');
+        return false;
+      }
 
-  // Kayıt olma
-  static Future<void> logSignUp(String method) async {
-    await _analytics.logSignUp(signUpMethod: method);
-    print("✍️ Event: Kayıt olundu - $method");
-  }
-
-  // Çıkış yapma
-  static Future<void> logLogout() async {
-    await _analytics.logEvent(name: 'logout');
-    print("🚪 Event: Çıkış yapıldı");
-  }
-
-  // 🏆 KOCAELISPOR ÖZEL EVENTLER
-
-  // Kadro görüntüleme
-  static Future<void> logViewTeam() async {
-    await _analytics.logEvent(
-      name: 'view_team',
-      parameters: {
-        'content_type': 'team_roster',
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
-    );
-    print("👥 Event: Kadro görüntülendi");
-  }
-
-  // Oyuncu detayı görüntüleme
-  static Future<void> logViewPlayer(String playerName, int playerNumber) async {
-    await _analytics.logEvent(
-      name: 'view_player',
-      parameters: {
-        'player_name': playerName,
-        'player_number': playerNumber,
-        'content_type': 'player_detail',
-      },
-    );
-    print("👤 Event: Oyuncu görüntülendi - $playerName (#$playerNumber)");
-  }
-
-  // Maç takvimi görüntüleme
-  static Future<void> logViewFixture() async {
-    await _analytics.logEvent(
-      name: 'view_fixture',
-      parameters: {
-        'content_type': 'match_calendar',
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
-    );
-    print("📅 Event: Maç takvimi görüntülendi");
-  }
-
-  // Puan durumu görüntüleme
-  static Future<void> logViewLeagueTable() async {
-    await _analytics.logEvent(
-      name: 'view_league_table',
-      parameters: {
-        'content_type': 'standings',
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
-    );
-    print("📊 Event: Puan durumu görüntülendi");
-  }
-
-  // Profil görüntüleme
-  static Future<void> logViewProfile() async {
-    await _analytics.logEvent(
-      name: 'view_profile',
-      parameters: {
-        'content_type': 'user_profile',
-      },
-    );
-    print("👤 Event: Profil görüntülendi");
-  }
-
-  // 📊 İNTERAKSİYON EVENTLER
-
-  // Oyuncu ekleme (admin)
-  static Future<void> logAddPlayer(String playerName) async {
-    await _analytics.logEvent(
-      name: 'add_player',
-      parameters: {
-        'player_name': playerName,
-        'action_type': 'admin_action',
-      },
-    );
-    print("➕ Event: Oyuncu eklendi - $playerName");
-  }
-
-  // Oyuncu düzenleme (admin)
-  static Future<void> logEditPlayer(String playerName) async {
-    await _analytics.logEvent(
-      name: 'edit_player',
-      parameters: {
-        'player_name': playerName,
-        'action_type': 'admin_action',
-      },
-    );
-    print("✏️ Event: Oyuncu düzenlendi - $playerName");
-  }
-
-  // Puan durumu güncelleme (admin)
-  static Future<void> logUpdateStandings() async {
-    await _analytics.logEvent(
-      name: 'update_standings',
-      parameters: {
-        'action_type': 'admin_action',
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
-    );
-    print("🔄 Event: Puan durumu güncellendi");
-  }
-
-  // Bildirim ayarları değişikliği
-  static Future<void> logNotificationSettings(Map<String, bool> settings) async {
-    await _analytics.logEvent(
-      name: 'notification_settings_changed',
-      parameters: {
-        'match_notifications': settings['match'] ?? false,
-        'news_notifications': settings['news'] ?? false,
-        'general_notifications': settings['general'] ?? false,
-      },
-    );
-    print("🔔 Event: Bildirim ayarları değiştirildi");
-  }
-
-  // 🔍 ARAMA VE FİLTRELEME
-
-  // İçerik arama
-  static Future<void> logSearch(String searchTerm, String category) async {
-    await _analytics.logEvent(
-      name: 'search',
-      parameters: {
-        'search_term': searchTerm,
-        'category': category,
-      },
-    );
-    print("🔍 Event: Arama yapıldı - '$searchTerm' ($category)");
-  }
-
-  // 🎯 ÖZEL ANALYTICS METODLARI
-
-  // Ekran ziyaret süresi ölçümü başlat
-  static DateTime? _screenStartTime;
-
-  static void startScreenTime(String screenName) {
-    _screenStartTime = DateTime.now();
-    _analytics.logScreenView(screenName: screenName);
-    print("⏰ Screen: $screenName başladı");
-  }
-
-  // Ekran ziyaret süresi ölçümü bitir
-  static Future<void> endScreenTime(String screenName) async {
-    if (_screenStartTime != null) {
-      final duration = DateTime.now().difference(_screenStartTime!);
-      await _analytics.logEvent(
-        name: 'screen_view_duration',
-        parameters: {
-          'screen_name': screenName,
-          'duration_seconds': duration.inSeconds,
-        },
+      // Admin panel erişimini logla
+      await logAdminActivity(
+        action: 'ADMIN_PANEL_ACCESS',
+        targetType: 'SYSTEM',
+        targetId: 'admin_panel',
       );
-      print("⏱️ Screen: $screenName - ${duration.inSeconds} saniye");
-      _screenStartTime = null;
+
+      return true;
+    } catch (e) {
+      print('Admin panel erişim kontrolü hatası: $e');
+      return false;
     }
   }
 
-  // Hata loglama
-  static Future<void> logError(String errorType, String errorMessage) async {
-    await _analytics.logEvent(
-      name: 'app_error',
-      parameters: {
-        'error_type': errorType,
-        'error_message': errorMessage,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
-    );
-    print("❌ Error: $errorType - $errorMessage");
+  // Admin istatistiklerini getir
+  static Future<Map<String, int>> getAdminStats() async {
+    try {
+      final Map<String, int> stats = {};
+
+      // Kullanıcı sayısı
+      final usersSnapshot = await _firestore.collection('users').get();
+      stats['totalUsers'] = usersSnapshot.docs.length;
+
+      // Haber sayısı
+      final newsSnapshot = await _firestore.collection('haberler').get();
+      stats['totalNews'] = newsSnapshot.docs.length;
+
+      // Oyuncu sayısı
+      final playersSnapshot = await _firestore.collection('oyuncular').get();
+      stats['totalPlayers'] = playersSnapshot.docs.length;
+
+      // Maç sayısı
+      final matchesSnapshot = await _firestore.collection('maclar').get();
+      stats['totalMatches'] = matchesSnapshot.docs.length;
+
+      return stats;
+    } catch (e) {
+      print('İstatistik yükleme hatası: $e');
+      return {
+        'totalUsers': 0,
+        'totalNews': 0,
+        'totalPlayers': 0,
+        'totalMatches': 0,
+      };
+    }
   }
 
-  // Performance loglama
-  static Future<void> logPerformance(String action, int durationMs) async {
-    await _analytics.logEvent(
-      name: 'performance_metric',
-      parameters: {
+  // Kullanıcıyı admin yap
+  static Future<bool> makeUserAdmin(String email) async {
+    try {
+      // E-posta ile kullanıcı bul
+      final usersQuery = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+
+      if (usersQuery.docs.isEmpty) {
+        print('Kullanıcı bulunamadı: $email');
+        return false;
+      }
+
+      final userDoc = usersQuery.docs.first;
+
+      // Admin yetkisi ver
+      await userDoc.reference.update({'isAdmin': true});
+
+      print('Kullanıcı admin yapıldı: $email');
+      return true;
+    } catch (e) {
+      print('Admin yapma hatası: $e');
+      return false;
+    }
+  }
+
+  // Admin yetkisini kaldır
+  static Future<bool> removeAdminRole(String email) async {
+    try {
+      // E-posta ile kullanıcı bul
+      final usersQuery = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+
+      if (usersQuery.docs.isEmpty) {
+        print('Kullanıcı bulunamadı: $email');
+        return false;
+      }
+
+      final userDoc = usersQuery.docs.first;
+
+      // Admin yetkisini kaldır
+      await userDoc.reference.update({'isAdmin': false});
+
+      print('Admin yetkisi kaldırıldı: $email');
+      return true;
+    } catch (e) {
+      print('Admin yetkisi kaldırma hatası: $e');
+      return false;
+    }
+  }
+
+  // Admin aktivitesini logla
+  static Future<void> logAdminActivity({
+    required String action,
+    required String targetType,
+    String? targetId,
+    Map<String, dynamic>? details,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      await _firestore.collection('admin_logs').add({
         'action': action,
-        'duration_ms': durationMs,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
-    );
-    print("⚡ Performance: $action - ${durationMs}ms");
+        'adminId': user.uid,
+        'adminEmail': user.email,
+        'targetType': targetType,
+        'targetId': targetId,
+        'details': details,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      print('Admin aktivitesi loglandı: $action');
+    } catch (e) {
+      print('Log kaydetme hatası: $e');
+    }
   }
 
-  // 🔓 PUBLIC ACCESSOR (Analytics wrapper için gerekli)
+  // Kullanıcı kaydında admin kontrolü yap (yeni kullanıcılar için)
+  static Future<void> setupUserOnRegister(User user) async {
+    try {
+      final userDoc = _firestore.collection('users').doc(user.uid);
 
-  /// Firebase Analytics instance'ına erişim için public getter
-  /// Analytics wrapper ve diğer servislerden erişim için gerekli
-  static FirebaseAnalytics get analytics => _analytics;
+      // Kullanıcı daha önce kaydedilmiş mi kontrol et
+      final docSnapshot = await userDoc.get();
+
+      if (!docSnapshot.exists) {
+        // Yeni kullanıcı, varsayılan olarak admin değil
+        await userDoc.set({
+          'uid': user.uid,
+          'email': user.email,
+          'displayName': user.displayName,
+          'photoURL': user.photoURL,
+          'isAdmin': false, // Varsayılan olarak admin değil
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastLoginAt': FieldValue.serverTimestamp(),
+        });
+
+        print('Yeni kullanıcı kaydedildi: ${user.email}');
+      } else {
+        // Mevcut kullanıcı, sadece son giriş zamanını güncelle
+        await userDoc.update({
+          'lastLoginAt': FieldValue.serverTimestamp(),
+        });
+
+        print('Kullanıcı girişi güncellendi: ${user.email}');
+      }
+
+      // Admin panel erişimi logla (admin ise)
+      final userData = docSnapshot.exists ? docSnapshot.data() as Map<String, dynamic> : {'isAdmin': false};
+      if (userData['isAdmin'] == true) {
+        await logAdminActivity(
+          action: 'ADMIN_LOGIN',
+          targetType: 'SYSTEM',
+          targetId: user.uid,
+        );
+      }
+    } catch (e) {
+      print('Kullanıcı kurulum hatası: $e');
+    }
+  }
+
+  // İlk admin kullanıcıyı oluştur (geliştirme amaçlı)
+  static Future<void> createFirstAdmin(String email) async {
+    try {
+      final usersQuery = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+
+      if (usersQuery.docs.isNotEmpty) {
+        final userDoc = usersQuery.docs.first;
+        await userDoc.reference.update({'isAdmin': true});
+
+        await logAdminActivity(
+          action: 'FIRST_ADMIN_CREATED',
+          targetType: 'USER',
+          targetId: email,
+        );
+
+        print('İlk admin oluşturuldu: $email');
+      } else {
+        print('Kullanıcı bulunamadı: $email');
+      }
+    } catch (e) {
+      print('İlk admin oluşturma hatası: $e');
+    }
+  }
+
+  // Tüm adminleri listele
+  static Future<List<Map<String, dynamic>>> getAllAdmins() async {
+    try {
+      final adminQuery = await _firestore
+          .collection('users')
+          .where('isAdmin', isEqualTo: true)
+          .get();
+
+      return adminQuery.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('Admin listesi yükleme hatası: $e');
+      return [];
+    }
+  }
+
+  // Admin loglarını temizle (eski logları sil)
+  static Future<void> cleanOldLogs({int daysToKeep = 30}) async {
+    try {
+      final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
+      final cutoffTimestamp = Timestamp.fromDate(cutoffDate);
+
+      final oldLogsQuery = await _firestore
+          .collection('admin_logs')
+          .where('timestamp', isLessThan: cutoffTimestamp)
+          .get();
+
+      final batch = _firestore.batch();
+      for (final doc in oldLogsQuery.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+      print('${oldLogsQuery.docs.length} eski log temizlendi');
+    } catch (e) {
+      print('Log temizleme hatası: $e');
+    }
+  }
+
+  // Kullanıcı sayısı istatistikleri
+  static Future<Map<String, int>> getUserStats() async {
+    try {
+      final usersSnapshot = await _firestore.collection('users').get();
+      int totalUsers = usersSnapshot.docs.length;
+      int adminUsers = usersSnapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return data['isAdmin'] == true;
+      }).length;
+
+      return {
+        'totalUsers': totalUsers,
+        'adminUsers': adminUsers,
+        'regularUsers': totalUsers - adminUsers,
+      };
+    } catch (e) {
+      print('Kullanıcı istatistik hatası: $e');
+      return {'totalUsers': 0, 'adminUsers': 0, 'regularUsers': 0};
+    }
+  }
 }

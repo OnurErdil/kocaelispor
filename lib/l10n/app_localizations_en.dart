@@ -39,12 +39,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get or => 'or';
 
   @override
-  String get dontHaveAccount => 'Don\'t have an account?';
-
-  @override
-  String get alreadyHaveAccount => 'Remember your password?';
-
-  @override
   String get homeTab => 'Home';
 
   @override
@@ -60,16 +54,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get teamRoster => 'Team Roster';
 
   @override
-  String get fixtureResults => 'Fixtures & Calendar';
+  String get fixtureResults => 'Fixtures & Results';
 
   @override
-  String get standings => 'League Table';
+  String get standings => 'Standings';
 
   @override
   String get notifications => 'Notifications';
 
   @override
-  String get notificationSettings => 'Notification Settings';
+  String get settings => 'Settings';
 
   @override
   String get themeSettings => 'Theme Settings';
@@ -93,15 +87,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get english => 'English';
 
   @override
-  String get matchNotifications => 'Match Notifications';
-
-  @override
-  String get newsNotifications => 'News Notifications';
-
-  @override
-  String get generalNotifications => 'General Notifications';
-
-  @override
   String get save => 'Save';
 
   @override
@@ -117,7 +102,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get add => 'Add';
 
   @override
-  String get logout => 'Sign Out';
+  String get logout => 'Logout';
 
   @override
   String get confirm => 'Confirm';
@@ -136,31 +121,4 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tryAgain => 'Try Again';
-
-  @override
-  String get player => 'Player';
-
-  @override
-  String get position => 'Position';
-
-  @override
-  String get jerseyNumber => 'Jersey No';
-
-  @override
-  String get played => 'P';
-
-  @override
-  String get won => 'W';
-
-  @override
-  String get draw => 'D';
-
-  @override
-  String get lost => 'L';
-
-  @override
-  String get points => 'Points';
-
-  @override
-  String get goalDifference => 'GD';
 }

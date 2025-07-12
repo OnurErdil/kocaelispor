@@ -1,7 +1,7 @@
 // lib/widgets/language_toggle_button.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/language_provider.dart';
+import '../provider/language_provider.dart';  // ✅ Doğru path: provider klasörü
 import '../theme/app_theme.dart';
 
 class LanguageToggleButton extends StatelessWidget {

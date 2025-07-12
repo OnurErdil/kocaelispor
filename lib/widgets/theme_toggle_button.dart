@@ -1,7 +1,7 @@
 // lib/widgets/theme_toggle_button.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/theme_provider.dart' as providers;
+import '../provider/theme_provider.dart';  // ✅ Doğru path: provider klasörü
 import '../theme/app_theme.dart';
 
 class ThemeToggleButton extends StatelessWidget {
@@ -16,7 +16,7 @@ class ThemeToggleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<providers.ThemeProvider>(
+    return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return IconButton(
           onPressed: () async {
@@ -65,7 +65,7 @@ class MiniThemeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<providers.ThemeProvider>(
+    return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return GestureDetector(
           onTap: () async {
@@ -83,6 +83,76 @@ class MiniThemeToggle extends StatelessWidget {
               color: AppTheme.primaryGreen,
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+// Gelişmiş tema toggle butonu (3 seçenek)
+class AdvancedThemeToggle extends StatelessWidget {
+  const AdvancedThemeToggle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return PopupMenuButton<ThemeMode>(
+          icon: Icon(
+            themeProvider.themeIcon,
+            color: Colors.white,
+          ),
+          tooltip: "Tema Seçimi",
+          onSelected: (ThemeMode mode) async {
+            await themeProvider.setThemeMode(mode);
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: ThemeMode.light,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.light_mode,
+                    color: themeProvider.themeMode == ThemeMode.light
+                        ? AppTheme.primaryGreen
+                        : Colors.grey,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Açık Tema'),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: ThemeMode.dark,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.dark_mode,
+                    color: themeProvider.themeMode == ThemeMode.dark
+                        ? AppTheme.primaryGreen
+                        : Colors.grey,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Koyu Tema'),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: ThemeMode.system,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.brightness_auto,
+                    color: themeProvider.themeMode == ThemeMode.system
+                        ? AppTheme.primaryGreen
+                        : Colors.grey,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Sistem Teması'),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
