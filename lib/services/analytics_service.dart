@@ -238,7 +238,13 @@ class AnalyticsService {
     );
     print("❌ Error: $errorType - $errorMessage");
   }
-
+  static Future<void> logEvent(String eventName, {Map<String, Object>? parameters}) async {
+    await _analytics.logEvent(
+      name: eventName,
+      parameters: parameters,
+    );
+    print("📊 Event: $eventName${parameters != null ? ' - $parameters' : ''}");
+  }
   // Performance loglama
   static Future<void> logPerformance(String action, int durationMs) async {
     await _analytics.logEvent(

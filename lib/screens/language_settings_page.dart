@@ -15,8 +15,8 @@ class LanguageSettingsPage extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: CustomAppBar(
-        title: l10n.languageSettings,
+      appBar: const CustomAppBar(
+        title: "Dil Ayarları", // Sabit başlık - l10n kullanmayalım
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -27,7 +27,7 @@ class LanguageSettingsPage extends StatelessWidget {
               children: [
                 // Başlık
                 Text(
-                  l10n.languageSettings,
+                  languageProvider.isTurkish ? "Dil Ayarları" : "Language Settings",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: AppTheme.primaryGreen,
                     fontWeight: FontWeight.bold,
@@ -55,7 +55,6 @@ class LanguageSettingsPage extends StatelessWidget {
                           title: "Türkçe",
                           subtitle: "Turkish",
                           flag: "🇹🇷",
-                          isNative: true,
                         ),
 
                         const Divider(height: 32),
@@ -67,7 +66,6 @@ class LanguageSettingsPage extends StatelessWidget {
                           title: "English",
                           subtitle: "İngilizce",
                           flag: "🇺🇸",
-                          isNative: false,
                         ),
                       ],
                     ),
@@ -126,8 +124,8 @@ class LanguageSettingsPage extends StatelessWidget {
                           await languageProvider.toggleLanguage();
 
                           // Analytics eventi
-                          AnalyticsService._analytics.logEvent(
-                            name: 'language_quick_toggle',
+                          await AnalyticsService.logEvent(
+                            'language_quick_toggle',
                             parameters: {
                               'new_language': languageProvider.currentLocale.languageCode,
                             },
@@ -154,7 +152,7 @@ class LanguageSettingsPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                _buildLanguagePreview(context, l10n),
+                _buildLanguagePreview(context, languageProvider),
 
                 const SizedBox(height: 24),
 
@@ -203,7 +201,6 @@ class LanguageSettingsPage extends StatelessWidget {
     required String title,
     required String subtitle,
     required String flag,
-    required bool isNative,
   }) {
     final isSelected = languageProvider.currentLocale.languageCode == locale.languageCode;
 
@@ -212,8 +209,8 @@ class LanguageSettingsPage extends StatelessWidget {
         await languageProvider.setLanguage(locale);
 
         // Analytics eventi
-        AnalyticsService._analytics.logEvent(
-          name: 'language_changed',
+        await AnalyticsService.logEvent(
+          'language_changed',
           parameters: {
             'language_code': locale.languageCode,
             'previous_language': languageProvider.currentLocale.languageCode,
@@ -225,9 +222,12 @@ class LanguageSettingsPage extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                isNative ? "$title seçildi" : "$title selected",
+                languageProvider.isTurkish
+                    ? "$title seçildi"
+                    : "$title selected",
               ),
               duration: const Duration(seconds: 2),
+              backgroundColor: AppTheme.primaryGreen,
             ),
           );
         }
@@ -305,90 +305,92 @@ class LanguageSettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildLanguagePreview(BuildContext context, AppLocalizations l10n) {
+  Widget _buildLanguagePreview(BuildContext context, LanguageProvider languageProvider) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
-        color: Theme.of(context).cardColor,
+        color: Theme.of(context).colorScheme.surface,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Örnek başlık
-          Container(
-            width: double.infinity,
-            height: 32,
-            decoration: BoxDecoration(
+          // Başlık önizlemesi
+          Text(
+            languageProvider.isTurkish ? "Kocaelispor Fan Uygulaması" : "Kocaelispor Fan App",
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
               color: AppTheme.primaryGreen,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Center(
-              child: Text(
-                l10n.appTitle,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
             ),
           ),
+          const SizedBox(height: 8),
 
+          // Alt başlık önizlemesi
+          Text(
+            languageProvider.isTurkish
+                ? "En güncel haberler ve maç sonuçları"
+                : "Latest news and match results",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey.shade600,
+            ),
+          ),
           const SizedBox(height: 12),
 
-          // Örnek tab'lar
+          // Buton önizlemesi
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildPreviewTab(l10n.homeTab),
-              _buildPreviewTab(l10n.teamTab),
-              _buildPreviewTab(l10n.fixtureTab),
-              _buildPreviewTab(l10n.profileTab),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Örnek buton
-          Container(
-            width: double.infinity,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryGreen.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.primaryGreen),
-            ),
-            child: Center(
-              child: Text(
-                l10n.login,
-                style: const TextStyle(
-                  color: AppTheme.primaryGreen,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: null, // Önizleme için deaktif
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppTheme.primaryGreen),
+                  ),
+                  child: Text(
+                    languageProvider.isTurkish ? "Kadroyu Gör" : "View Squad",
+                    style: TextStyle(color: AppTheme.primaryGreen),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: null, // Önizleme için deaktif
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(
+                    languageProvider.isTurkish ? "Haberler" : "News",
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildPreviewTab(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
+// LanguageProvider için eksik metod
+extension LanguageProviderExtension on LanguageProvider {
+  static Locale getLocaleFromCode(String languageCode) {
+    switch (languageCode) {
+      case 'tr':
+        return const Locale('tr', 'TR');
+      case 'en':
+        return const Locale('en', 'US');
+      default:
+        return const Locale('tr', 'TR');
+    }
+  }
+
+  Future<void> toggleLanguage() async {
+    if (isTurkish) {
+      await setLanguage(const Locale('en', 'US'));
+    } else {
+      await setLanguage(const Locale('tr', 'TR'));
+    }
   }
 }

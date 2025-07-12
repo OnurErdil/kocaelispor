@@ -2,8 +2,18 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'analytics_service.dart';
 
-// Bu servis, push notification'ları yönetir
+// Uygulama tamamen kapalıyken gelen mesajları işlemek için
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print("📱 Arka planda mesaj geldi:");
+  print("Başlık: ${message.notification?.title}");
+  print("İçerik: ${message.notification?.body}");
+}
+
+// FCM (Firebase Cloud Messaging) servisi
 class FCMService {
   // Firebase Messaging örneği
   static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -15,9 +25,17 @@ class FCMService {
   // Token'ı saklayacağımız değişken
   static String? _token;
 
+  // Bildirim ayarları
+  static bool _newsNotifications = true;
+  static bool _matchNotifications = true;
+  static bool _generalNotifications = true;
+
   // Servisi başlatma
   static Future<void> initialize() async {
     print("🔥 FCM Servisi başlatılıyor...");
+
+    // Background handler'ı ayarla
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     // İzin isteme
     await _requestPermission();
@@ -31,6 +49,9 @@ class FCMService {
     // Mesaj dinleyicilerini ayarlama
     _setupMessageHandlers();
 
+    // Bildirim ayarlarını yükle
+    await _loadNotificationSettings();
+
     print("✅ FCM Servisi başarıyla başlatıldı!");
   }
 
@@ -39,9 +60,9 @@ class FCMService {
     print("📱 Bildirim izni isteniyor...");
 
     NotificationSettings settings = await _firebaseMessaging.requestPermission(
-      alert: true,      // Uyarı gösterme
-      badge: true,      // Uygulama ikonunda sayı gösterme
-      sound: true,      // Ses çalma
+      alert: true,
+      badge: true,
+      sound: true,
       announcement: false,
       carPlay: false,
       criticalAlert: false,
@@ -57,7 +78,7 @@ class FCMService {
     }
   }
 
-  // Local notification'ları ayarlama (uygulama açıkken göstermek için)
+  // Local notification'ları ayarlama
   static Future<void> _setupLocalNotifications() async {
     print("🔔 Local notification'lar ayarlanıyor...");
 
@@ -84,28 +105,51 @@ class FCMService {
       settings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         print("🔔 Local notification'a tıklandı: ${response.payload}");
+        _handleNotificationTap(response.payload);
       },
     );
+
+    // Android notification channel oluştur
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'kocaelispor_channel',
+      'Kocaelispor Bildirimleri',
+      description: 'Kocaelispor uygulaması bildirimleri',
+      importance: Importance.high,
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
 
     print("✅ Local notification'lar ayarlandı");
   }
 
-  // FCM token'ını alma (her cihazın kendine özel kodu)
+  // FCM token'ını alma
   static Future<void> _getToken() async {
     try {
       _token = await _firebaseMessaging.getToken();
       print("🔑 FCM Token alındı: $_token");
 
+      // Token'ı SharedPreferences'a kaydet
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('fcm_token', _token ?? '');
+
       // Token değişirse bu çalışır
       _firebaseMessaging.onTokenRefresh.listen((newToken) {
         print("🔄 FCM Token yenilendi: $newToken");
         _token = newToken;
-        // Burada token'ı sunucunuza gönderebilirsiniz
+        _saveTokenToPrefs(newToken);
       });
-
     } catch (e) {
       print("❌ FCM Token alınamadı: $e");
     }
+  }
+
+  // Token'ı SharedPreferences'a kaydet
+  static Future<void> _saveTokenToPrefs(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('fcm_token', token);
   }
 
   // Mesaj dinleyicilerini ayarlama
@@ -118,8 +162,19 @@ class FCMService {
       print("Başlık: ${message.notification?.title}");
       print("İçerik: ${message.notification?.body}");
 
-      // Local notification göster
-      _showLocalNotification(message);
+      // Analytics kaydı - mevcut metod ile
+      await _analytics.logEvent(
+        name: 'notification_received',
+        parameters: {
+          'type': message.data['type'] ?? 'general',
+          'title': message.notification?.title ?? '',
+        },
+      );
+
+      // Bildirim ayarlarına göre göster
+      if (_shouldShowNotification(message)) {
+        _showLocalNotification(message);
+      }
     });
 
     // Uygulama kapalıyken tıklanan mesajlar
@@ -127,22 +182,73 @@ class FCMService {
       print("🚀 Kapalı uygulamadan mesaj açıldı:");
       print("Başlık: ${message.notification?.title}");
 
-      // Burada mesaja göre farklı sayfalara yönlendirebilirsiniz
-      _handleNotificationTap(message);
+      // Analytics kaydı - mevcut metod ile
+      await _analytics.logEvent(
+        name: 'notification_opened',
+        parameters: {
+          'type': message.data['type'] ?? 'general',
+          'source': 'background',
+        },
+      );
+
+      _handleNotificationTap(message.data.toString());
     });
+
+    // Uygulama tamamen kapalıyken açılan mesajları kontrol et
+    _checkInitialMessage();
 
     print("✅ Mesaj dinleyicileri ayarlandı");
   }
 
-  // Local notification gösterme (uygulama açıkken)
+  // Uygulama tamamen kapalıyken açılan mesajları kontrol et
+  static Future<void> _checkInitialMessage() async {
+    RemoteMessage? initialMessage =
+    await FirebaseMessaging.instance.getInitialMessage();
+
+    if (initialMessage != null) {
+      print("🎯 Uygulama kapalıyken mesaja tıklandı");
+
+      // Analytics kaydı - mevcut metod ile
+      await _analytics.logEvent(
+        name: 'notification_opened',
+        parameters: {
+          'type': initialMessage.data['type'] ?? 'general',
+          'source': 'terminated',
+        },
+      );
+
+      _handleNotificationTap(initialMessage.data.toString());
+    }
+  }
+
+  // Bildirim gösterilmeli mi kontrol et
+  static bool _shouldShowNotification(RemoteMessage message) {
+    final notificationType = message.data['type'] ?? 'general';
+
+    switch (notificationType) {
+      case 'news':
+        return _newsNotifications;
+      case 'match':
+        return _matchNotifications;
+      case 'general':
+        return _generalNotifications;
+      default:
+        return true;
+    }
+  }
+
+  // Local notification gösterme
   static Future<void> _showLocalNotification(RemoteMessage message) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'kocaelispor_channel',    // Kanal ID'si
-      'Kocaelispor Bildirimleri', // Kanal adı
+    const AndroidNotificationDetails androidDetails =
+    AndroidNotificationDetails(
+      'kocaelispor_channel',
+      'Kocaelispor Bildirimleri',
       channelDescription: 'Kocaelispor uygulaması bildirimleri',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
+      icon: '@mipmap/ic_launcher',
+      color: Color(0xFF00913C), // Kocaelispor yeşili
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -157,7 +263,7 @@ class FCMService {
     );
 
     await _localNotifications.show(
-      DateTime.now().millisecond, // Benzersiz ID
+      DateTime.now().millisecond,
       message.notification?.title ?? 'Kocaelispor',
       message.notification?.body ?? 'Yeni bildirim',
       details,
@@ -166,46 +272,106 @@ class FCMService {
   }
 
   // Notification'a tıklandığında çalışacak fonksiyon
-  static void _handleNotificationTap(RemoteMessage message) {
-    print("🎯 Notification'a tıklandı, sayfa yönlendirme yapılabilir");
+  static void _handleNotificationTap(String? payload) {
+    if (payload == null) return;
 
-    // Mesajdaki data'ya göre farklı sayfalara yönlendirebilirsiniz
-    final String? page = message.data['page'];
+    print("🎯 Notification'a tıklandı: $payload");
 
-    switch (page) {
-      case 'kadro':
-        print("👥 Kadro sayfasına yönlendirilecek");
-        break;
-      case 'takvim':
-        print("📅 Takvim sayfasına yönlendirilecek");
-        break;
-      case 'puan':
-        print("🏆 Puan durumu sayfasına yönlendirilecek");
-        break;
-      default:
-        print("🏠 Ana sayfaya yönlendirilecek");
+    // Burada navigation logic'i ekleyebilirsiniz
+    // Navigator.pushNamed(context, '/specific-page');
+  }
+
+  // Bildirim ayarlarını yükle
+  static Future<void> _loadNotificationSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    _newsNotifications = prefs.getBool('news_notifications') ?? true;
+    _matchNotifications = prefs.getBool('match_notifications') ?? true;
+    _generalNotifications = prefs.getBool('general_notifications') ?? true;
+  }
+
+  // Bildirim ayarlarını kaydet
+  static Future<void> updateNotificationSettings({
+    bool? news,
+    bool? match,
+    bool? general,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (news != null) {
+      _newsNotifications = news;
+      await prefs.setBool('news_notifications', news);
+    }
+
+    if (match != null) {
+      _matchNotifications = match;
+      await prefs.setBool('match_notifications', match);
+    }
+
+    if (general != null) {
+      _generalNotifications = general;
+      await prefs.setBool('general_notifications', general);
+    }
+
+    // Analytics kaydı - mevcut metod ile
+    await _analytics.logEvent(
+      name: 'notification_settings_changed',
+      parameters: {
+        'news_enabled': _newsNotifications,
+        'match_enabled': _matchNotifications,
+        'general_enabled': _generalNotifications,
+      },
+    );
+
+    print("💾 Bildirim ayarları güncellendi");
+  }
+
+  // Topic'e abone ol
+  static Future<void> subscribeToTopic(String topic) async {
+    try {
+      await _firebaseMessaging.subscribeToTopic(topic);
+      print("📢 Topic'e abone olundu: $topic");
+    } catch (e) {
+      print("❌ Topic'e abone olunamadı: $e");
     }
   }
 
-  // Token'ı alma (diğer dosyalardan erişim için)
-  static String? get token => _token;
+  // Topic aboneliğinden çık
+  static Future<void> unsubscribeFromTopic(String topic) async {
+    try {
+      await _firebaseMessaging.unsubscribeFromTopic(topic);
+      print("🚫 Topic aboneliğinden çıkıldı: $topic");
+    } catch (e) {
+      print("❌ Topic aboneliğinden çıkılamadı: $e");
+    }
+  }
 
-  // Test bildirimi gönderme (geliştirme aşamasında test için)
+  // Getter'lar
+  static String? get token => _token;
+  static bool get newsNotifications => _newsNotifications;
+  static bool get matchNotifications => _matchNotifications;
+  static bool get generalNotifications => _generalNotifications;
+
+  // Test bildirimi gönderme
   static Future<void> sendTestNotification() async {
     if (_token == null) {
       print("❌ Token yok, test bildirimi gönderilemez");
       return;
     }
 
-    print("🧪 Test bildirimi token'ı: $_token");
+    print("🧪 Test bildirimi için token:");
+    print(_token);
     print("Bu token'ı Firebase Console'da test için kullanabilirsiniz");
   }
-}
 
-// Uygulama tamamen kapalıyken gelen mesajları işlemek için
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print("📱 Arka planda mesaj geldi:");
-  print("Başlık: ${message.notification?.title}");
-  print("İçerik: ${message.notification?.body}");
-}}
+  // Tüm bildirimleri temizle
+  static Future<void> clearAllNotifications() async {
+    await _localNotifications.cancelAll();
+    print("🧹 Tüm bildirimler temizlendi");
+  }
+
+  // Belirli ID'li bildirimi temizle
+  static Future<void> clearNotification(int id) async {
+    await _localNotifications.cancel(id);
+    print("🗑️ Bildirim temizlendi: $id");
+  }
+}

@@ -102,15 +102,16 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
-  // Flutter ThemeMode'a dönüştür
-  MaterialApp.of get flutterThemeMode {
+  // ✅ DÜZELTME: Flutter ThemeMode'a dönüştür
+  // MaterialApp.of yanlıştı, ThemeMode döndürmeliyiz
+  ThemeMode get flutterThemeMode {
     switch (_themeMode) {
       case ThemeMode.light:
-        return ThemeMode.light as MaterialApp.of;
+        return ThemeMode.light;
       case ThemeMode.dark:
-        return ThemeMode.dark as MaterialApp.of;
+        return ThemeMode.dark;
       case ThemeMode.system:
-        return ThemeMode.system as MaterialApp.of;
+        return ThemeMode.system;
     }
   }
 }
