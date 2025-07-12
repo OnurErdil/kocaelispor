@@ -6,7 +6,7 @@ class AnalyticsService {
   static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
   static final FirebaseAnalyticsObserver observer =
   FirebaseAnalyticsObserver(analytics: _analytics);
-
+  static FirebaseAnalytics get analytics => _analytics;
   // Servis başlatma
   static Future<void> initialize() async {
     print("📊 Analytics Service başlatılıyor...");
