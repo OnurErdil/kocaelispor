@@ -4,7 +4,7 @@ import 'register_page.dart';
 import 'reset_password_page.dart';
 import 'main_screen.dart';
 import '../services/google_signin_service.dart';
-
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -58,6 +58,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
+
+      // ✅ Analytics eventi ekle
+      await AnalyticsService.logLogin('email');
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
@@ -134,6 +137,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     try {
       final userCredential = await GoogleSignInService.signInWithGoogle();
       if (userCredential != null && mounted) {
+        // ✅ Analytics eventi ekle
+        await AnalyticsService.logLogin('google');
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const MainScreen()),
@@ -166,6 +171,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!; // ✅ Localization instance
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -222,9 +229,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const Text(
-                              "Hoş Geldiniz",
-                              style: TextStyle(
+                            Text(
+                              l10n.welcome, // ✅ Localized text
+                              style: const TextStyle(
                                 fontSize: 18,
                                 color: Colors.grey,
                                 fontWeight: FontWeight.w500,
@@ -239,16 +246,20 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               textInputAction: TextInputAction.next,
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'E-posta adresi gerekli';
+                                  return l10n.isTurkish
+                                      ? 'E-posta adresi gerekli'
+                                      : 'Email address is required';
                                 }
                                 if (!_isValidEmail(value.trim())) {
-                                  return 'Geçerli bir e-posta adresi girin';
+                                  return l10n.isTurkish
+                                      ? 'Geçerli bir e-posta adresi girin'
+                                      : 'Enter a valid email address';
                                 }
                                 return null;
                               },
                               decoration: InputDecoration(
-                                labelText: "E-posta",
-                                hintText: "ornek@email.com",
+                                labelText: l10n.email, // ✅ Localized
+                                hintText: "example@email.com",
                                 prefixIcon: const Icon(Icons.email_outlined),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -272,15 +283,19 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               onFieldSubmitted: (_) => login(),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Şifre gerekli';
+                                  return l10n.isTurkish
+                                      ? 'Şifre gerekli'
+                                      : 'Password is required';
                                 }
                                 if (value.length < 6) {
-                                  return 'Şifre en az 6 karakter olmalı';
+                                  return l10n.isTurkish
+                                      ? 'Şifre en az 6 karakter olmalı'
+                                      : 'Password must be at least 6 characters';
                                 }
                                 return null;
                               },
                               decoration: InputDecoration(
-                                labelText: "Şifre",
+                                labelText: l10n.password, // ✅ Localized
                                 hintText: "••••••••",
                                 prefixIcon: const Icon(Icons.lock_outline),
                                 suffixIcon: IconButton(
@@ -332,9 +347,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     strokeWidth: 2,
                                   ),
                                 )
-                                    : const Text(
-                                  "Giriş Yap",
-                                  style: TextStyle(
+                                    : Text(
+                                  l10n.login, // ✅ Localized
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -346,9 +361,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                             // Şifremi unuttum
                             TextButton(
                               onPressed: isLoading ? null : navigateToResetPassword,
-                              child: const Text(
-                                "Şifremi Unuttum",
-                                style: TextStyle(
+                              child: Text(
+                                l10n.forgotPassword, // ✅ Localized
+                                style: const TextStyle(
                                   color: Color(0xFF00913C),
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -363,7 +378,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
                                   child: Text(
-                                    "veya",
+                                    l10n.or, // ✅ Localized
                                     style: TextStyle(
                                       color: Colors.grey.shade600,
                                       fontWeight: FontWeight.w500,
@@ -382,9 +397,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               child: OutlinedButton.icon(
                                 onPressed: isLoading ? null : googleSignIn,
                                 icon: const Icon(Icons.login, color: Colors.black87),
-                                label: const Text(
-                                  "Google ile Giriş",
-                                  style: TextStyle(
+                                label: Text(
+                                  l10n.googleSignIn, // ✅ Localized
+                                  style: const TextStyle(
                                     color: Colors.black87,
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
@@ -406,7 +421,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  "Hesabınız yok mu? ",
+                                  l10n.dontHaveAccount, // ✅ Localized
                                   style: TextStyle(color: Colors.grey.shade600),
                                 ),
                                 TextButton(
@@ -414,9 +429,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   style: TextButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(horizontal: 8),
                                   ),
-                                  child: const Text(
-                                    "Kayıt Ol",
-                                    style: TextStyle(
+                                  child: Text(
+                                    l10n.register, // ✅ Localized
+                                    style: const TextStyle(
                                       color: Color(0xFF00913C),
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -437,4 +452,3 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       ),
     );
   }
-}

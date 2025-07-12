@@ -4,6 +4,7 @@ import 'anasayfa.dart';
 import 'kadro_sayfasi.dart';
 import 'profile_page.dart';
 import 'takvim_sayfasi.dart';
+import 'galeri_sayfasi.dart'; // ✅ YENİ IMPORT
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -21,6 +22,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     const Anasayfa(),
     const KadroSayfasi(),
     const TakvimSayfasi(),
+    const GaleriSayfasi(), // ✅ YENİ SAYFA
     const ProfilePage(),
   ];
 
@@ -39,6 +41,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       icon: Icons.calendar_today_outlined,
       activeIcon: Icons.calendar_today,
       label: 'Takvim',
+    ),
+    _NavItem(
+      icon: Icons.photo_library_outlined, // ✅ YENİ İKON
+      activeIcon: Icons.photo_library,
+      label: 'Galeri',
     ),
     _NavItem(
       icon: Icons.person_outline,

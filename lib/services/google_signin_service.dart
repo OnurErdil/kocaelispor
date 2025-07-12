@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'admin_service.dart'; // ✅ YENİ IMPORT
 
 class GoogleSignInService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn();
@@ -25,25 +26,11 @@ class GoogleSignInService {
 
       final userCredential = await _auth.signInWithCredential(credential);
 
-      // Firestore users kaydı
+      // ✅ YENİ: Admin sistemi entegrasyonu
       final user = userCredential.user;
       if (user != null) {
-        final uid = user.uid;
-        final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
-
-        final docSnapshot = await userDoc.get();
-        if (!docSnapshot.exists) {
-          await userDoc.set({
-            'email': user.email,
-            'displayName': user.displayName,
-            'photoURL': user.photoURL,
-            'createdAt': FieldValue.serverTimestamp(),
-            'isAdmin': false,
-          });
-          print("✅ Yeni kullanıcı Firestore'a kaydedildi!");
-        } else {
-          print("✅ Kullanıcı zaten kayıtlı!");
-        }
+        await AdminService.setupUserOnRegister(user);
+        print("✅ Kullanıcı admin sistemi ile entegre edildi!");
       }
 
       return userCredential;

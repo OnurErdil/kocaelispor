@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart'; // ✅ YENİ EKLEME
 import '../services/google_signin_service.dart';
-import '../services/theme_service.dart'; // ✅ YENİ EKLEME
+import '../services/admin_service.dart';
+import '../theme/app_theme.dart';
+import 'admin_panel_screen.dart';
+import 'settings_page.dart'; // ✅ YENİ IMPORT
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -16,6 +18,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
   final user = FirebaseAuth.instance.currentUser;
   bool isLoading = false;
+  bool isAdmin = false;
   late AnimationController _animationController;
   late Animation<double> _slideAnimation;
 
@@ -30,12 +33,26 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
     );
     _animationController.forward();
+    _checkAdminStatus();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkAdminStatus() async {
+    try {
+      final adminStatus = await AdminService.isCurrentUserAdmin();
+      setState(() {
+        isAdmin = adminStatus;
+      });
+    } catch (e) {
+      setState(() {
+        isAdmin = false;
+      });
+    }
   }
 
   Future<void> signOut() async {
@@ -166,6 +183,32 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     }
   }
 
+  Future<void> _openAdminPanel() async {
+    HapticFeedback.lightImpact();
+
+    // Admin paneli erişim kontrolü
+    final canAccess = await AdminService.canAccessAdminPanel();
+    if (!canAccess) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Admin paneline erişim yetkiniz yok!"),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
+      );
+    }
+  }
+
   String getProviderInfo() {
     if (user?.providerData.isNotEmpty == true) {
       final providerId = user!.providerData.first.providerId;
@@ -224,8 +267,8 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF00913C),
-              Color(0xFF006B2D),
+              AppTheme.primaryGreen,
+              AppTheme.primaryDark,
             ],
             stops: [0.0, 0.3],
           ),
@@ -234,6 +277,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           child: RefreshIndicator(
             onRefresh: () async {
               await user!.reload();
+              await _checkAdminStatus();
               setState(() {});
             },
             child: SingleChildScrollView(
@@ -251,35 +295,57 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                       child: Column(
                         children: [
                           // Profile photo with animated border
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 4,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
+                          Stack(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 4,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              radius: 60,
-                              backgroundColor: Colors.grey.shade200,
-                              backgroundImage: user!.photoURL != null
-                                  ? NetworkImage(user!.photoURL!)
-                                  : null,
-                              child: user!.photoURL == null
-                                  ? const Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Color(0xFF00913C),
-                              )
-                                  : null,
-                            ),
+                                child: CircleAvatar(
+                                  radius: 60,
+                                  backgroundColor: Colors.grey.shade200,
+                                  backgroundImage: user!.photoURL != null
+                                      ? NetworkImage(user!.photoURL!)
+                                      : null,
+                                  child: user!.photoURL == null
+                                      ? const Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: AppTheme.primaryGreen,
+                                  )
+                                      : null,
+                                ),
+                              ),
+                              // Admin badge
+                              if (isAdmin)
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.orange,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.admin_panel_settings,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                           const SizedBox(height: 16),
 
@@ -292,6 +358,39 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                               color: Colors.white,
                             ),
                           ),
+
+                          // Admin badge text
+                          if (isAdmin)
+                            Container(
+                              margin: const EdgeInsets.only(top: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade600,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.admin_panel_settings,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Admin',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
 
                           // Email verification status
                           Container(
@@ -362,30 +461,50 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                           // Account info cards
                           ..._buildInfoCards(),
 
-                          const SizedBox(height: 16),
-
-                          // ✅ TEMA KARTI - YENİ EKLEME!
-                          Consumer<ThemeService>(
-                            builder: (context, themeService, child) {
-                              return _InfoCard(
-                                icon: themeService.isDarkMode
-                                    ? Icons.light_mode
-                                    : Icons.dark_mode,
-                                title: "Tema",
-                                value: themeService.isDarkMode ? "Koyu Tema" : "Açık Tema",
-                                trailing: Switch(
-                                  value: themeService.isDarkMode,
-                                  onChanged: (value) {
-                                    themeService.toggleTheme();
-                                    HapticFeedback.lightImpact();
-                                  },
-                                  activeColor: const Color(0xFF00913C),
-                                ),
-                              );
-                            },
-                          ),
-
                           const SizedBox(height: 24),
+
+                          // Ayarlar butonu
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton.icon(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const SettingsPage()),
+                              ),
+                              icon: const Icon(Icons.settings),
+                              label: const Text("Ayarlar"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey.shade600,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Admin panel button
+                          if (isAdmin) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton.icon(
+                                onPressed: _openAdminPanel,
+                                icon: const Icon(Icons.admin_panel_settings),
+                                label: const Text("Admin Paneli"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange.shade600,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
 
                           // Email verification button
                           if (!user!.emailVerified) ...[
@@ -447,7 +566,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF00913C).withOpacity(0.1),
+                              color: AppTheme.primaryGreen.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Row(
@@ -455,14 +574,14 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                               children: [
                                 Icon(
                                   Icons.sports_soccer,
-                                  color: Color(0xFF00913C),
+                                  color: AppTheme.primaryGreen,
                                   size: 20,
                                 ),
                                 SizedBox(width: 8),
                                 Text(
                                   "Kocaelispor'a Hoş Geldiniz",
                                   style: TextStyle(
-                                    color: Color(0xFF00913C),
+                                    color: AppTheme.primaryGreen,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -500,6 +619,17 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         value: getProviderInfo(),
       ),
       const SizedBox(height: 12),
+      if (isAdmin)
+        _InfoCard(
+          icon: Icons.admin_panel_settings,
+          title: "Yetki",
+          value: "Yönetici",
+          trailing: Icon(
+            Icons.admin_panel_settings,
+            color: Colors.orange.shade600,
+          ),
+        ),
+      if (isAdmin) const SizedBox(height: 12),
       _InfoCard(
         icon: Icons.calendar_today_outlined,
         title: "Üyelik Tarihi",
@@ -542,12 +672,12 @@ class _InfoCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF00913C).withOpacity(0.1),
+              color: AppTheme.primaryGreen.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               icon,
-              color: const Color(0xFF00913C),
+              color: AppTheme.primaryGreen,
               size: 20,
             ),
           ),

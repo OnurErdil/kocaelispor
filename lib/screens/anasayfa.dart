@@ -40,11 +40,15 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const CustomAppBar(
-        title: "Kocaelispor",
-        showBackButton: false,
-      ),
+    return AnalyticsWrapper(
+        screenName: 'home_screen',
+        onScreenView: () => AnalyticsService.logAppOpen(),
+    child: Scaffold(
+    appBar: const CustomAppBar(
+    title: "Ana Sayfa",
+    showBackButton: false,
+    showThemeToggle: true, // ✅ Tema butonunu göster
+    ),
       body: RefreshIndicator(
         onRefresh: () async {
           setState(() {});

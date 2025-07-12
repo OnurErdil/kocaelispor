@@ -8,8 +8,8 @@ class Foto {
   final String baslik;
   final String? aciklama;
   final String kategori;
-  final DateTime tarih;
   final String? fotografci;
+  final DateTime tarih;
   final List<String> etiketler;
   final int begeniSayisi;
 
@@ -19,85 +19,72 @@ class Foto {
     required this.baslik,
     this.aciklama,
     required this.kategori,
-    required this.tarih,
     this.fotografci,
-    this.etiketler = const [],
-    this.begeniSayisi = 0,
+    required this.tarih,
+    required this.etiketler,
+    required this.begeniSayisi,
   });
 
-  // Firestore'dan Foto nesnesi oluştur
+  // Firestore'dan Foto objesi oluştur
   factory Foto.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
     return Foto(
       id: doc.id,
       url: data['url'] ?? '',
-      baslik: data['baslik'] ?? '',
+      baslik: data['baslik'] ?? 'Başlık Yok',
       aciklama: data['aciklama'],
       kategori: data['kategori'] ?? 'Genel',
-      tarih: (data['tarih'] as Timestamp?)?.toDate() ?? DateTime.now(),
       fotografci: data['fotografci'],
+      tarih: (data['tarih'] as Timestamp?)?.toDate() ?? DateTime.now(),
       etiketler: List<String>.from(data['etiketler'] ?? []),
       begeniSayisi: data['begeniSayisi'] ?? 0,
     );
   }
 
-  // Firestore'a göndermek için Map'e çevir
+  // Firestore'a kaydetmek için Map'e çevir
   Map<String, dynamic> toMap() {
     return {
       'url': url,
       'baslik': baslik,
       'aciklama': aciklama,
       'kategori': kategori,
-      'tarih': Timestamp.fromDate(tarih),
       'fotografci': fotografci,
+      'tarih': Timestamp.fromDate(tarih),
       'etiketler': etiketler,
       'begeniSayisi': begeniSayisi,
     };
   }
 
-  // Tarihi güzel formatta göster
+  // Formatlanmış tarih
   String get formattedDate {
-    final now = DateTime.now();
-    final difference = now.difference(tarih);
-
-    if (difference.inDays == 0) {
-      return 'Bugün';
-    } else if (difference.inDays == 1) {
-      return 'Dün';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} gün önce';
-    } else {
-      return '${tarih.day}/${tarih.month}/${tarih.year}';
-    }
+    return "${tarih.day}.${tarih.month}.${tarih.year}";
   }
 
-  // Kategori rengini al
+  // Kategori rengini döndür
   static Color getKategoriColor(String kategori) {
     switch (kategori.toLowerCase()) {
       case 'maç':
-      case 'mac':
-        return const Color(0xFF4CAF50); // Yeşil
+        return Colors.red.shade600;
       case 'antrenman':
-        return const Color(0xFFFF9800); // Turuncu
+        return Colors.blue.shade600;
       case 'taraftar':
-        return const Color(0xFFE91E63); // Pembe
+        return Colors.orange.shade600;
       case 'stadyum':
-        return const Color(0xFF2196F3); // Mavi
+        return Colors.purple.shade600;
       case 'oyuncular':
-        return const Color(0xFF9C27B0); // Mor
+        return Colors.green.shade600;
       case 'kutlama':
-        return const Color(0xFFFFC107); // Sarı
+        return Colors.pink.shade600;
       default:
-        return const Color(0xFF607D8B); // Gri
+        return Colors.grey.shade600;
     }
   }
 
-  // Kategori ikonu al
+  // Kategori ikonunu döndür
   static IconData getKategoriIcon(String kategori) {
     switch (kategori.toLowerCase()) {
       case 'maç':
-      case 'mac':
         return Icons.sports_soccer;
       case 'antrenman':
         return Icons.fitness_center;
@@ -113,4 +100,42 @@ class Foto {
         return Icons.photo;
     }
   }
+
+  // Kopyalama metodu (güncelleme için)
+  Foto copyWith({
+    String? url,
+    String? baslik,
+    String? aciklama,
+    String? kategori,
+    String? fotografci,
+    DateTime? tarih,
+    List<String>? etiketler,
+    int? begeniSayisi,
+  }) {
+    return Foto(
+      id: id,
+      url: url ?? this.url,
+      baslik: baslik ?? this.baslik,
+      aciklama: aciklama ?? this.aciklama,
+      kategori: kategori ?? this.kategori,
+      fotografci: fotografci ?? this.fotografci,
+      tarih: tarih ?? this.tarih,
+      etiketler: etiketler ?? this.etiketler,
+      begeniSayisi: begeniSayisi ?? this.begeniSayisi,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'Foto{id: $id, baslik: $baslik, kategori: $kategori}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Foto && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }
