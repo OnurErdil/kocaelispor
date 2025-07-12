@@ -1,13 +1,17 @@
 // lib/screens/theme_settings_page.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/theme_provider.dart' as providers;
 import '../widgets/custom_app_bar.dart';
 import '../theme/app_theme.dart';
-import '../services/analytics_service.dart';
 
-class ThemeSettingsPage extends StatelessWidget {
+class ThemeSettingsPage extends StatefulWidget {
   const ThemeSettingsPage({super.key});
+
+  @override
+  State<ThemeSettingsPage> createState() => _ThemeSettingsPageState();
+}
+
+class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
+  String selectedTheme = 'light'; // light, dark, system
 
   @override
   Widget build(BuildContext context) {
@@ -17,209 +21,214 @@ class ThemeSettingsPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Consumer<providers.ThemeProvider>(
-          builder: (context, themeProvider, child) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Başlık
-                Text(
-                  "Görünüm Tercihi",
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.primaryGreen,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Uygulamanın görünümünü kişiselleştirin",
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Başlık
+            Text(
+              "Görünüm Tercihi",
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: AppTheme.primaryGreen,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Uygulamanın görünümünü kişiselleştirin",
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 24),
 
-                // Tema seçenekleri
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+            // Tema seçenekleri
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    _buildThemeOption(
+                      theme: 'light',
+                      title: "Açık Tema",
+                      subtitle: "Parlak renk teması",
+                      icon: Icons.light_mode,
+                      color: Colors.orange,
+                    ),
+
+                    const Divider(height: 32),
+
+                    _buildThemeOption(
+                      theme: 'dark',
+                      title: "Koyu Tema",
+                      subtitle: "Karanlık renk teması",
+                      icon: Icons.dark_mode,
+                      color: Colors.purple,
+                    ),
+
+                    const Divider(height: 32),
+
+                    _buildThemeOption(
+                      theme: 'system',
+                      title: "Sistem Teması",
+                      subtitle: "Cihaz ayarını takip eder",
+                      icon: Icons.settings,
+                      color: Colors.blue,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Mevcut tema bilgisi
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryGreen,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _getThemeIcon(),
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildThemeOption(
-                          context: context,
-                          themeProvider: themeProvider,
-                          themeMode: providers.ThemeMode.light,
-                          title: "Açık Tema",
-                          subtitle: "Parlak ve temiz görünüm",
-                          icon: Icons.light_mode,
-                          previewColors: [
-                            Colors.white,
-                            Colors.grey.shade50,
-                            Colors.grey.shade100,
-                          ],
+                        Text(
+                          "Aktif Tema",
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.primaryGreen,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-
-                        const Divider(height: 24),
-
-                        _buildThemeOption(
-                          context: context,
-                          themeProvider: themeProvider,
-                          themeMode: providers.ThemeMode.dark,
-                          title: "Koyu Tema",
-                          subtitle: "Göz dostu karanlık görünüm",
-                          icon: Icons.dark_mode,
-                          previewColors: [
-                            Colors.grey.shade900,
-                            Colors.grey.shade800,
-                            Colors.grey.shade700,
-                          ],
-                        ),
-
-                        const Divider(height: 24),
-
-                        _buildThemeOption(
-                          context: context,
-                          themeProvider: themeProvider,
-                          themeMode: providers.ThemeMode.system,
-                          title: "Sistem Teması",
-                          subtitle: "Cihaz ayarlarını takip eder",
-                          icon: Icons.brightness_auto,
-                          previewColors: [
-                            AppTheme.primaryGreen,
-                            AppTheme.primaryGreen.withOpacity(0.7),
-                            AppTheme.primaryGreen.withOpacity(0.4),
-                          ],
+                        Text(
+                          _getThemeDescription(),
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ),
+                  // Hızlı değiştirme butonu
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        if (selectedTheme == 'light') {
+                          selectedTheme = 'dark';
+                        } else if (selectedTheme == 'dark') {
+                          selectedTheme = 'system';
+                        } else {
+                          selectedTheme = 'light';
+                        }
+                      });
 
-                const SizedBox(height: 24),
+                      // Kullanıcıya bilgi ver
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("${_getThemeDescription()} seçildi"),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.refresh,
+                      color: AppTheme.primaryGreen,
+                    ),
+                    tooltip: "Hızlı Değiştir",
+                  ),
+                ],
+              ),
+            ),
 
-                // Mevcut tema bilgisi
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppTheme.primaryGreen.withOpacity(0.3),
+            const SizedBox(height: 16),
+
+            // Tema önizleme
+            Text(
+              "Önizleme",
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            _buildThemePreview(),
+
+            const SizedBox(height: 24),
+
+            // Bilgi kutusu
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.blue.shade600,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Tema değişikliği uygulama yeniden başlatıldığında etkili olur.",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade800,
+                      ),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          themeProvider.themeIcon,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Aktif Tema",
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.primaryGreen,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              themeProvider.themeDescription,
-                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Hızlı değiştirme butonu
-                      IconButton(
-                        onPressed: () async {
-                          await themeProvider.toggleTheme();
-
-                          // Analytics eventi - düzeltilmiş
-                          await AnalyticsService.logEvent(
-                            'theme_quick_toggle',
-                            parameters: {
-                              'new_theme': themeProvider.themeMode.toString(),
-                            },
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.refresh,
-                          color: AppTheme.primaryGreen,
-                        ),
-                        tooltip: "Hızlı Değiştir",
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Tema önizleme
-                Text(
-                  "Önizleme",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                _buildThemePreview(context, themeProvider),
-              ],
-            );
-          },
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ✅ EKSIK METOD: _buildThemeOption
+  // Tema seçeneği widget'ı
   Widget _buildThemeOption({
-    required BuildContext context,
-    required providers.ThemeProvider themeProvider,
-    required providers.ThemeMode themeMode,
+    required String theme,
     required String title,
     required String subtitle,
     required IconData icon,
-    required List<Color> previewColors,
+    required Color color,
   }) {
-    final isSelected = themeProvider.themeMode == themeMode;
+    final isSelected = selectedTheme == theme;
 
     return InkWell(
-      onTap: () async {
-        await themeProvider.setThemeMode(themeMode);
+      onTap: () {
+        setState(() {
+          selectedTheme = theme;
+        });
 
-        // Analytics eventi
-        await AnalyticsService.logEvent(
-          'theme_changed',
-          parameters: {
-            'theme_mode': themeMode.toString(),
-            'previous_theme': themeProvider.themeMode.toString(),
-          },
+        // Kullanıcıya bilgi ver
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("$title seçildi"),
+            duration: const Duration(seconds: 2),
+          ),
         );
-
-        // Feedback
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("$title seçildi"),
-              duration: const Duration(seconds: 2),
-              backgroundColor: AppTheme.primaryGreen,
-            ),
-          );
-        }
       },
       borderRadius: BorderRadius.circular(12),
       child: Padding(
@@ -232,19 +241,17 @@ class ThemeSettingsPage extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.primaryGreen.withOpacity(0.1)
-                    : Colors.grey.withOpacity(0.1),
+                    ? color.withValues(alpha: 0.2)
+                    : Colors.grey.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected
-                      ? AppTheme.primaryGreen
-                      : Colors.grey.shade300,
+                  color: isSelected ? color : Colors.grey.shade300,
                   width: isSelected ? 2 : 1,
                 ),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? AppTheme.primaryGreen : Colors.grey.shade600,
+                color: isSelected ? color : Colors.grey.shade600,
                 size: 24,
               ),
             ),
@@ -260,7 +267,7 @@ class ThemeSettingsPage extends StatelessWidget {
                     title,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? AppTheme.primaryGreen : null,
+                      color: isSelected ? color : null,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -274,37 +281,26 @@ class ThemeSettingsPage extends StatelessWidget {
               ),
             ),
 
-            // Renk önizlemesi
-            Row(
-              children: previewColors.map((color) {
-                return Container(
-                  width: 16,
-                  height: 16,
-                  margin: const EdgeInsets.only(left: 4),
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.grey.shade300,
-                      width: 0.5,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(width: 12),
-
             // Seçim göstergesi
-            Radio<providers.ThemeMode>(
-              value: themeMode,
-              groupValue: themeProvider.themeMode,
-              onChanged: (value) async {
+            Radio<String>(
+              value: theme,
+              groupValue: selectedTheme,
+              onChanged: (value) {
                 if (value != null) {
-                  await themeProvider.setThemeMode(value);
+                  setState(() {
+                    selectedTheme = value;
+                  });
+
+                  // Kullanıcıya bilgi ver
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("$title seçildi"),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
                 }
               },
-              activeColor: AppTheme.primaryGreen,
+              activeColor: color,
             ),
           ],
         ),
@@ -312,118 +308,102 @@ class ThemeSettingsPage extends StatelessWidget {
     );
   }
 
-  // ✅ EKSIK METOD: _buildThemePreview
-  Widget _buildThemePreview(BuildContext context, providers.ThemeProvider themeProvider) {
+  // Tema önizleme widget'ı
+  Widget _buildThemePreview() {
+    Color previewBg;
+    Color previewText;
+    Color previewCard;
+
+    switch (selectedTheme) {
+      case 'dark':
+        previewBg = Colors.grey.shade900;
+        previewText = Colors.white;
+        previewCard = Colors.grey.shade800;
+        break;
+      case 'light':
+        previewBg = Colors.white;
+        previewText = Colors.black;
+        previewCard = Colors.grey.shade100;
+        break;
+      case 'system':
+      default:
+      // Mevcut tema moduna göre
+        final brightness = Theme.of(context).brightness;
+        if (brightness == Brightness.dark) {
+          previewBg = Colors.grey.shade900;
+          previewText = Colors.white;
+          previewCard = Colors.grey.shade800;
+        } else {
+          previewBg = Colors.white;
+          previewText = Colors.black;
+          previewCard = Colors.grey.shade100;
+        }
+        break;
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
+        color: previewBg,
         border: Border.all(color: Colors.grey.shade300),
-        color: Theme.of(context).colorScheme.surface,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Başlık önizlemesi
-          Row(
-            children: [
-              Icon(
-                Icons.sports_soccer,
-                color: AppTheme.primaryGreen,
-                size: 20,
+          // Başlık
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              "Kocaelispor",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
-              const SizedBox(width: 8),
-              Text(
-                "Kocaelispor",
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryGreen,
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 12),
 
-          // İçerik önizlemesi
+          // İçerik kartı
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceVariant,
+              color: previewCard,
               borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Son Haberler",
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Kocaelispor'dan transfer haberleri...",
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Buton önizlemesi
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: null, // Önizleme için deaktif
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppTheme.primaryGreen),
-                  ),
-                  child: Text(
-                    "Takım",
-                    style: TextStyle(color: AppTheme.primaryGreen),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: null, // Önizleme için deaktif
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryGreen,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text("Haberler"),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Tema açıklaması
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryGreen.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
                 Icon(
-                  themeProvider.themeIcon,
-                  color: AppTheme.primaryGreen,
-                  size: 16,
+                  Icons.sports_soccer,
+                  color: previewText,
+                  size: 20,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  "${themeProvider.themeDescription} aktif",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.primaryGreen,
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Maç Sonucu",
+                        style: TextStyle(
+                          color: previewText,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        "Kocaelispor 2-1 Rakip",
+                        style: TextStyle(
+                          color: previewText.withValues(alpha: 0.7),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -432,5 +412,33 @@ class ThemeSettingsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Aktif tema ikonu
+  IconData _getThemeIcon() {
+    switch (selectedTheme) {
+      case 'light':
+        return Icons.light_mode;
+      case 'dark':
+        return Icons.dark_mode;
+      case 'system':
+        return Icons.settings;
+      default:
+        return Icons.light_mode;
+    }
+  }
+
+  // Aktif tema açıklaması
+  String _getThemeDescription() {
+    switch (selectedTheme) {
+      case 'light':
+        return "Açık Tema";
+      case 'dark':
+        return "Koyu Tema";
+      case 'system':
+        return "Sistem Teması";
+      default:
+        return "Açık Tema";
+    }
   }
 }
