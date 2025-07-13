@@ -1,9 +1,13 @@
+// lib/screens/forum_sayfasi.dart - Çalışan Final Versiyon
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../widgets/custom_app_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
+import '../widgets/custom_app_bar.dart';
 import '../models/forum_models.dart';
+import '../services/forum_service.dart';
+import 'konu_olustur_sayfasi.dart';
+import 'forum_kategori_sayfasi.dart';
 
 class ForumSayfasi extends StatefulWidget {
   const ForumSayfasi({super.key});
@@ -13,244 +17,112 @@ class ForumSayfasi extends StatefulWidget {
 }
 
 class _ForumSayfasiState extends State<ForumSayfasi> {
-  bool _isInitialized = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeForum();
-  }
-
-  Future<void> _initializeForum() async {
-    try {
-      await _createDefaultCategories();
-      setState(() {
-        _isInitialized = true;
-      });
-    } catch (e) {
-      print('Forum başlatma hatası: $e');
-      setState(() {
-        _isInitialized = true;
-      });
-    }
-  }
-
-  Future<void> _createDefaultCategories() async {
-    final firestore = FirebaseFirestore.instance;
-
-    final categories = [
-      {
-        'id': 'genel',
-        'ad': 'Genel Konular',
-        'aciklama': 'Takımımız hakkında genel sohbet',
-        'ikon': 'chat',
-        'renk': 0xFF4CAF50,
-        'sira': 1,
-        'aktif': true,
-        'konuSayisi': 0,
-        'mesajSayisi': 0,
-        'olusturmaTarihi': FieldValue.serverTimestamp(),
-      },
-      {
-        'id': 'maclar',
-        'ad': 'Maç Konuları',
-        'aciklama': 'Oynanan ve oynanacak maçlar hakkında',
-        'ikon': 'sports_soccer',
-        'renk': 0xFF2196F3,
-        'sira': 2,
-        'aktif': true,
-        'konuSayisi': 0,
-        'mesajSayisi': 0,
-        'olusturmaTarihi': FieldValue.serverTimestamp(),
-      },
-      {
-        'id': 'transferler',
-        'ad': 'Transfer & Kadro',
-        'aciklama': 'Transfer haberleri ve kadro değişiklikleri',
-        'ikon': 'swap_horiz',
-        'renk': 0xFFFF9800,
-        'sira': 3,
-        'aktif': true,
-        'konuSayisi': 0,
-        'mesajSayisi': 0,
-        'olusturmaTarihi': FieldValue.serverTimestamp(),
-      },
-      {
-        'id': 'diger',
-        'ad': 'Diğer Konular',
-        'aciklama': 'Futbol dışı konular',
-        'ikon': 'more_horiz',
-        'renk': 0xFF607D8B,
-        'sira': 4,
-        'aktif': true,
-        'konuSayisi': 0,
-        'mesajSayisi': 0,
-        'olusturmaTarihi': FieldValue.serverTimestamp(),
-      },
-    ];
-
-    for (var category in categories) {
-      final docRef = firestore.collection('forum_kategorileri').doc(category['id'] as String);
-      final doc = await docRef.get();
-
-      if (!doc.exists) {
-        await docRef.set(category);
-      }
-    }
-  }
-
-  int _safeIntValue(dynamic value, int defaultValue) {
-    if (value == null) return defaultValue;
-    if (value is int) return value;
-    if (value is String) {
-      return int.tryParse(value) ?? defaultValue;
-    }
-    return defaultValue;
-  }
-
-  String _safeStringValue(dynamic value, String defaultValue) {
-    if (value == null) return defaultValue;
-    if (value is String) return value;
-    return value.toString();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const CustomAppBar(
-        title: 'Forum',
+        title: "Forum",
       ),
-      body: !_isInitialized
-          ? const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
-        ),
-      )
-          : _buildForumContent(),
-    );
-  }
-
-  Widget _buildForumContent() {
-    return Column(
-      children: [
-        _buildForumHeader(),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('forum_kategorileri')
-                .where('aktif', isEqualTo: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('forum_kategorileri')
+            .orderBy('sira')
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                   ),
-                );
-              }
+                  SizedBox(height: 16),
+                  Text('Forum kategorileri yükleniyor...'),
+                ],
+              ),
+            );
+          }
 
-              if (snapshot.hasError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error, size: 60, color: Colors.red),
-                      const SizedBox(height: 16),
-                      const Text('Kategoriler yüklenirken hata oluştu'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => setState(() {}),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryGreen,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Tekrar Dene'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.forum_outlined, size: 80, color: Colors.grey),
-                      SizedBox(height: 20),
-                      Text(
-                        'Henüz kategori yok',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              var docs = snapshot.data!.docs.toList();
-              docs.sort((a, b) {
-                final aData = a.data() as Map<String, dynamic>;
-                final bData = b.data() as Map<String, dynamic>;
-
-                final aSira = _safeIntValue(aData['sira'], 99);
-                final bSira = _safeIntValue(bData['sira'], 99);
-
-                return aSira.compareTo(bSira);
-              });
-
-              return ListView.builder(
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
                 padding: const EdgeInsets.all(16),
-                itemCount: docs.length,
-                itemBuilder: (context, index) {
-                  final data = docs[index].data() as Map<String, dynamic>;
-                  return _buildCategoryCard(data, docs[index].id);
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildForumHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.primaryGreen,
-            AppTheme.primaryGreen.withOpacity(0.8),
-          ],
-        ),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.forum, color: Colors.white, size: 28),
-              SizedBox(width: 12),
-              Text(
-                'Kocaelispor Forum',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Forum yüklenirken hata oluştu',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Hata: ${snapshot.error}',
+                      style: const TextStyle(fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => setState(() {}),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Tekrar Dene'),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Takımımız hakkında konuşalım!',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white70,
-            ),
-          ),
-        ],
+            );
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.forum_outlined,
+                    size: 80,
+                    color: AppTheme.primaryGreen.withOpacity(0.5),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Henüz kategori yok',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Forum kategorileri yakında eklenecek',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // ✅ BAŞARILI DURUM - KATEGORİLER GÖSTER
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              final doc = snapshot.data!.docs[index];
+              final data = doc.data() as Map<String, dynamic>;
+              return _buildCategoryCard(data, doc.id);
+            },
+          );
+        },
       ),
     );
   }
@@ -392,9 +264,24 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
       ),
     );
   }
+
+  // Güvenli değer alma fonksiyonları
+  String _safeStringValue(dynamic value, String defaultValue) {
+    if (value == null) return defaultValue;
+    return value.toString();
+  }
+
+  int _safeIntValue(dynamic value, int defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return int.tryParse(value.toString()) ?? defaultValue;
+  }
 }
 
+// ============================================
 // KATEGORİ DETAY SAYFASI
+// ============================================
 class KategoriDetaySayfasi extends StatelessWidget {
   final String kategoriAd;
   final String kategoriId;
@@ -432,6 +319,7 @@ class KategoriDetaySayfasi extends StatelessWidget {
               stream: FirebaseFirestore.instance
                   .collection('forum_konulari')
                   .where('kategoriId', isEqualTo: kategoriId)
+                  .orderBy('olusturmaTarihi', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -497,25 +385,29 @@ class KategoriDetaySayfasi extends StatelessWidget {
             size: 32,
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                kategoriAd,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: kategoriRenk,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  kategoriAd,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: kategoriRenk,
+                  ),
                 ),
-              ),
-              Text(
-                'Konuları görüntüleyin ve yeni konu açın',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
+                const SizedBox(height: 4),
+                Text(
+                  'Konuları görüntüleyin ve yeni konu açın',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[700], // ✅ Beyaz yerine koyu gri
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -572,6 +464,8 @@ class KategoriDetaySayfasi extends StatelessWidget {
     final olusturanAd = data['olusturanAd'] ?? 'Anonim';
     final mesajSayisi = data['mesajSayisi'] ?? 0;
     final goruntulemeSayisi = data['goruntulemeSayisi'] ?? 0;
+    final sabitlenmis = data['sabitlenmis'] ?? false;
+    final etiket = data['etiket'];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -588,49 +482,87 @@ class KategoriDetaySayfasi extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  baslik,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                // Başlık ve etiketler
+                Row(
+                  children: [
+                    if (sabitlenmis) ...[
+                      Icon(
+                        Icons.push_pin,
+                        size: 16,
+                        color: kategoriRenk,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: Text(
+                        baslik,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (etiket != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getEtiketColor(etiket),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _getEtiketText(etiket),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 12),
+
+                const SizedBox(height: 8),
+
+                // Alt bilgiler
                 Row(
                   children: [
                     Icon(
-                      Icons.person_outline,
+                      Icons.person,
                       size: 14,
-                      color: Colors.grey[600],
+                      color: Colors.grey[500],
                     ),
                     const SizedBox(width: 4),
                     Text(
                       olusturanAd,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: Colors.grey[500],
                       ),
                     ),
                     const SizedBox(width: 16),
                     Icon(
-                      Icons.message_outlined,
+                      Icons.message,
                       size: 14,
-                      color: kategoriRenk,
+                      color: Colors.grey[500],
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '$mesajSayisi mesaj',
+                      '$mesajSayisi',
                       style: TextStyle(
                         fontSize: 12,
-                        color: kategoriRenk,
-                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[500],
                       ),
                     ),
                     const SizedBox(width: 16),
                     Icon(
-                      Icons.visibility_outlined,
+                      Icons.visibility,
                       size: 14,
                       color: Colors.grey[500],
                     ),
@@ -652,276 +584,79 @@ class KategoriDetaySayfasi extends StatelessWidget {
     );
   }
 
+  Color _getEtiketColor(String etiket) {
+    switch (etiket) {
+      case 'hot':
+        return Colors.red;
+      case 'new':
+        return Colors.green;
+      case 'important':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getEtiketText(String etiket) {
+    switch (etiket) {
+      case 'hot':
+        return 'Popüler';
+      case 'new':
+        return 'Yeni';
+      case 'important':
+        return 'Önemli';
+      default:
+        return 'Genel';
+    }
+  }
+
   void _yeniKonuOlustur(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => KonuOlusturSayfasi(
-          kategoriAd: kategoriAd,
-          kategoriId: kategoriId,
-          kategoriRenk: kategoriRenk,
+          kategori: ForumKategori(
+            id: kategoriId,
+            ad: kategoriAd,
+            aciklama: '',
+            ikon: kategoriIkon,
+            renk: kategoriRenk,
+            sira: 0,
+            olusturmaTarihi: DateTime.now(),
+          ),
         ),
       ),
     );
   }
 
   void _konuyaGit(BuildContext context, Map<String, dynamic> data, String konuId) {
+    // Önce görüntüleme sayısını artır
+    FirebaseFirestore.instance
+        .collection('forum_konulari')
+        .doc(konuId)
+        .update({'goruntulemeSayisi': FieldValue.increment(1)});
+
+    // Konu detay sayfasına git
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => KonuDetaySayfasi(
-          konuBaslik: data['baslik'] ?? 'Başlıksız Konu',
-          konuId: konuId,
-          kategoriRenk: kategoriRenk,
+        builder: (context) => ForumKonuSayfasi(
+          konu: ForumKonu(
+            id: konuId,
+            baslik: data['baslik'] ?? 'Başlıksız Konu',
+            aciklama: data['aciklama'] ?? '',
+            kategoriId: kategoriId,
+            olusturanId: data['olusturanId'] ?? '',
+            olusturanAd: data['olusturanAd'] ?? 'Anonim',
+            olusturmaTarihi: DateTime.now(),
+            mesajSayisi: data['mesajSayisi'] ?? 0,
+            goruntulemeSayisi: data['goruntulemeSayisi'] ?? 0,
+            sonMesajTarihi: DateTime.now(),
+            etiket: data['etiket'],
+            sabitlenmis: data['sabitlenmis'] ?? false,
+          ),
         ),
       ),
     );
   }
 }
-
-// KONU OLUŞTURMA SAYFASI
-class KonuOlusturSayfasi extends StatefulWidget {
-  final String kategoriAd;
-  final String kategoriId;
-  final Color kategoriRenk;
-
-  const KonuOlusturSayfasi({
-    super.key,
-    required this.kategoriAd,
-    required this.kategoriId,
-    required this.kategoriRenk,
-  });
-
-  @override
-  State<KonuOlusturSayfasi> createState() => _KonuOlusturSayfasiState();
-}
-
-class _KonuOlusturSayfasiState extends State<KonuOlusturSayfasi> {
-  final _formKey = GlobalKey<FormState>();
-  final _baslikController = TextEditingController();
-  final _aciklamaController = TextEditingController();
-  final _mesajController = TextEditingController();
-  bool _isLoading = false;
-
-  @override
-  void dispose() {
-    _baslikController.dispose();
-    _aciklamaController.dispose();
-    _mesajController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Yeni Konu - ${widget.kategoriAd}'),
-        backgroundColor: widget.kategoriRenk,
-        foregroundColor: Colors.white,
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _baslikController,
-              decoration: const InputDecoration(
-                labelText: 'Konu Başlığı',
-                hintText: 'Konunuzun başlığını yazın...',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.title),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Başlık boş olamaz';
-                }
-                if (value.trim().length < 5) {
-                  return 'Başlık en az 5 karakter olmalı';
-                }
-                return null;
-              },
-              maxLength: 100,
-            ),
-
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _aciklamaController,
-              decoration: const InputDecoration(
-                labelText: 'Açıklama (İsteğe bağlı)',
-                hintText: 'Konu hakkında kısa bir açıklama...',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.description),
-              ),
-              maxLines: 2,
-              maxLength: 200,
-            ),
-
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _mesajController,
-              decoration: const InputDecoration(
-                labelText: 'İlk Mesaj',
-                hintText: 'Konunuzun ilk mesajını yazın...',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.message),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'İlk mesaj boş olamaz';
-                }
-                if (value.trim().length < 10) {
-                  return 'Mesaj en az 10 karakter olmalı';
-                }
-                return null;
-              },
-              maxLines: 5,
-              maxLength: 1000,
-            ),
-
-            const SizedBox(height: 24),
-
-            SizedBox(
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: _isLoading ? null : _konuOlustur,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.kategoriRenk,
-                  foregroundColor: Colors.white,
-                ),
-                icon: _isLoading
-                    ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-                    : const Icon(Icons.send),
-                label: Text(
-                  _isLoading ? 'Oluşturuluyor...' : 'Konuyu Oluştur',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _konuOlustur() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      _showSnackBar('Konu oluşturmak için giriş yapmalısınız', true);
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final konuRef = await FirebaseFirestore.instance.collection('forum_konulari').add({
-        'baslik': _baslikController.text.trim(),
-        'aciklama': _aciklamaController.text.trim().isEmpty
-            ? null
-            : _aciklamaController.text.trim(),
-        'kategoriId': widget.kategoriId,
-        'olusturanId': user.uid,
-        'olusturanAd': user.displayName ?? 'Kocaelispor Taraftarı',
-        'olusturanFoto': user.photoURL,
-        'olusturmaTarihi': FieldValue.serverTimestamp(),
-        'sabitlenmis': false,
-        'kilitli': false,
-        'mesajSayisi': 1,
-        'goruntulemeSayisi': 0,
-        'sonMesajTarihi': FieldValue.serverTimestamp(),
-        'sonMesajGonderenAd': user.displayName ?? 'Kocaelispor Taraftarı',
-      });
-
-      await FirebaseFirestore.instance.collection('forum_mesajlari').add({
-        'icerik': _mesajController.text.trim(),
-        'konuId': konuRef.id,
-        'gonderenId': user.uid,
-        'gonderenAd': user.displayName ?? 'Kocaelispor Taraftarı',
-        'gonderenFoto': user.photoURL,
-        'tarih': FieldValue.serverTimestamp(),
-        'duzenlendiMi': false,
-      });
-
-      _showSnackBar('Konu başarıyla oluşturuldu! ⚽', false);
-      Navigator.pop(context);
-
-    } catch (e) {
-      print('Konu oluşturma hatası: $e');
-      _showSnackBar('Konu oluşturulamadı!', true);
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _showSnackBar(String message, bool isError) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : widget.kategoriRenk,
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: isError ? 4 : 2),
-      ),
-    );
-  }
-}
-
-// KONU DETAY SAYFASI
-class KonuDetaySayfasi extends StatefulWidget {
-  final String konuBaslik;
-  final String konuId;
-  final Color kategoriRenk;
-
-  const KonuDetaySayfasi({
-    super.key,
-    required this.konuBaslik,
-    required this.konuId,
-    required this.kategoriRenk,
-  });
-
-  @override
-  State<KonuDetaySayfasi> createState() => _KonuDetaySayfasiState();
-}
-
-class _KonuDetaySayfasiState extends State<KonuDetaySayfasi> {
-  final TextEditingController _mesajController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  bool _isLoading = false;
-
-  @override
-  void dispose() {
-    _mesajController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-        title: Text(widget.konuBaslik),
-    backgroundColor: widget.kategoriRenk,
-    foregroundColor: Colors.white,
-    ),
-    body: Column(
-    children: [
-    Expanded(
-    child: StreamBuilder<QuerySnapshot>(
-    stream: FirebaseFirestore.instance
