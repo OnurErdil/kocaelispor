@@ -1,8 +1,10 @@
-// lib/screens/news_page.dart
+// lib/screens/news_page.dart - Admin Kontrollü Versiyon
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_app_bar.dart';
 import '../theme/app_theme.dart';
+import '../services/admin_service.dart';
 
 class NewsPage extends StatefulWidget {
   const NewsPage({super.key});
@@ -15,10 +17,15 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
   late TabController _tabController;
   final List<String> _kategoriler = ['Tümü', 'Maç', 'Transfer', 'Antrenman', 'Kulüp'];
 
+  // Admin kontrolü için
+  bool _isAdmin = false;
+  bool _isCheckingAdmin = true;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _kategoriler.length, vsync: this);
+    _checkAdminStatus();
   }
 
   @override
@@ -27,20 +34,90 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
+  // Admin durumunu kontrol et
+  Future<void> _checkAdminStatus() async {
+    try {
+      final adminStatus = await AdminService.isCurrentUserAdmin();
+      setState(() {
+        _isAdmin = adminStatus;
+        _isCheckingAdmin = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isAdmin = false;
+        _isCheckingAdmin = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const CustomAppBar(
         title: "Haberler",
       ),
-      floatingActionButton: FloatingActionButton(
+      // FloatingActionButton sadece admin için göster
+      floatingActionButton: _isAdmin
+          ? FloatingActionButton(
         onPressed: () => _showAddNewsDialog(),
         backgroundColor: AppTheme.primaryGreen,
         child: const Icon(Icons.add, color: Colors.white),
-        tooltip: 'Haber Ekle',
-      ),
+        tooltip: 'Haber Ekle (Admin)',
+      )
+          : null,
       body: Column(
         children: [
+          // Admin kontrolü yüklenirken loading göster
+          if (_isCheckingAdmin)
+            Container(
+              color: Colors.orange.shade50,
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Yetki kontrol ediliyor...',
+                    style: TextStyle(
+                      color: Colors.orange.shade700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Admin için bilgi çubuğu
+          if (!_isCheckingAdmin && _isAdmin)
+            Container(
+              color: Colors.green.shade50,
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.admin_panel_settings,
+                      color: Colors.green.shade700, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Yönetici modundasınız',
+                    style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Kategori tabları
           Container(
             color: Theme.of(context).cardColor,
@@ -87,7 +164,7 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
                 CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text('Haberler yükleniyor...'),
               ],
             ),
@@ -138,16 +215,45 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
       ),
       child: InkWell(
         onTap: () => _showNewsDetail(haber, haberId),
+        onLongPress: _isAdmin ? () => _showAdminOptions(haberId, haber) : null, // Admin için uzun basma
         borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Admin etiketi (varsa)
+            if (_isAdmin)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.admin_panel_settings, size: 14, color: Colors.orange.shade700),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Düzenlemek için uzun basın',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.orange.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // Haber resmi (varsa)
             if (haber['resimUrl'] != null && haber['resimUrl'].toString().isNotEmpty)
               ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
+                borderRadius: BorderRadius.only(
+                  topLeft: _isAdmin ? Radius.zero : const Radius.circular(12),
+                  topRight: _isAdmin ? Radius.zero : const Radius.circular(12),
                 ),
                 child: Image.network(
                   haber['resimUrl'],
@@ -208,35 +314,36 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
-                        height: 1.4,
                       ),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
-                  // Alt bilgiler
+                  // Tarih ve yazar
                   Row(
                     children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color: Colors.grey.shade500,
-                      ),
+                      Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
                       const SizedBox(width: 4),
                       Text(
                         formattedDate,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade600,
+                          color: Colors.grey.shade500,
                         ),
                       ),
-                      const Spacer(),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: AppTheme.primaryGreen,
-                      ),
+                      if (haber['yazar'] != null) ...[
+                        const SizedBox(width: 16),
+                        Icon(Icons.person, size: 14, color: Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        Text(
+                          haber['yazar'],
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -248,26 +355,143 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildErrorWidget(String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: const TextStyle(fontSize: 16),
-            textAlign: TextAlign.center,
+  // Admin seçenekleri menüsü
+  void _showAdminOptions(String haberId, Map<String, dynamic> haber) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            Text(
+              'Admin İşlemleri',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange.shade700,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Düzenle
+            ListTile(
+              leading: Icon(Icons.edit, color: Colors.blue.shade600),
+              title: const Text('Haberi Düzenle'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditNewsDialog(haberId, haber);
+              },
+            ),
+
+            // Sil
+            ListTile(
+              leading: Icon(Icons.delete, color: Colors.red.shade600),
+              title: const Text('Haberi Sil'),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmDeleteNews(haberId, haber['baslik'] ?? 'Bu haber');
+              },
+            ),
+
+            // İptal
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('İptal'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Haber silme onayı
+  void _confirmDeleteNews(String haberId, String haberBaslik) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Haberi Sil'),
+        content: Text('\"$haberBaslik\" başlıklı haberi silmek istediğinizden emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
           ),
-          const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => setState(() {}),
-            child: const Text('Tekrar Dene'),
+            onPressed: () async {
+              Navigator.pop(context);
+              await _deleteNews(haberId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sil'),
           ),
         ],
       ),
     );
+  }
+
+  // Haber silme işlemi
+  Future<void> _deleteNews(String haberId) async {
+    try {
+      await FirebaseFirestore.instance.collection('haberler').doc(haberId).delete();
+
+      // Admin log kaydı
+      await AdminService.logAdminActivity(
+        action: 'NEWS_DELETED',
+        targetType: 'NEWS',
+        targetId: haberId,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Haber başarıyla silindi'),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Haber silinemedi: $e'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildEmptyWidget(String kategori) {
@@ -292,12 +516,33 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
           ),
           const SizedBox(height: 8),
           Text(
-            'İlk haberi siz ekleyin!',
+            _isAdmin ? 'İlk haberi siz ekleyin!' : 'Yakında haberler eklenecek!',
             style: TextStyle(
               color: Colors.grey.shade500,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(message),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => setState(() {}),
+              child: const Text('Tekrar Dene'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -347,6 +592,43 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
                 ),
               ),
 
+              // Admin için düzenle butonu
+              if (_isAdmin)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.orange.shade200),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.admin_panel_settings,
+                          size: 16, color: Colors.orange.shade700),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Yönetici Görünümü',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showEditNewsDialog(haberId, haber);
+                        },
+                        icon: Icon(Icons.edit, color: Colors.orange.shade700),
+                        tooltip: 'Düzenle',
+                      ),
+                    ],
+                  ),
+                ),
+
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
@@ -395,13 +677,27 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
                       ),
                       const SizedBox(height: 8),
 
-                      // Tarih
-                      Text(
-                        (haber['tarih'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? 'Tarih yok',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                        ),
+                      // Tarih ve yazar
+                      Row(
+                        children: [
+                          Text(
+                            (haber['tarih'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? 'Tarih yok',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          if (haber['yazar'] != null) ...[
+                            const SizedBox(width: 16),
+                            Text(
+                              '• ${haber['yazar']}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 16),
 
@@ -424,30 +720,46 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
     );
   }
 
+  // Haber ekleme dialogu (devamında _showEditNewsDialog ile birlikte olacak)
   void _showAddNewsDialog() {
-    final titleController = TextEditingController();
-    final summaryController = TextEditingController();
-    final contentController = TextEditingController();
-    final imageController = TextEditingController();
-    String selectedCategory = 'Genel';
+    _showNewsDialog(isEdit: false);
+  }
+
+  void _showEditNewsDialog(String haberId, Map<String, dynamic> haberData) {
+    _showNewsDialog(isEdit: true, haberId: haberId, existingData: haberData);
+  }
+
+  // Birleşik haber ekleme/düzenleme dialogu
+  void _showNewsDialog({
+    required bool isEdit,
+    String? haberId,
+    Map<String, dynamic>? existingData,
+  }) {
+    final titleController = TextEditingController(text: existingData?['baslik'] ?? '');
+    final summaryController = TextEditingController(text: existingData?['ozet'] ?? '');
+    final contentController = TextEditingController(text: existingData?['icerik'] ?? '');
+    final imageController = TextEditingController(text: existingData?['resimUrl'] ?? '');
+    final authorController = TextEditingController(text: existingData?['yazar'] ?? '');
+    String selectedCategory = existingData?['kategori'] ?? 'Genel';
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Yeni Haber Ekle'),
+          title: Text(isEdit ? 'Haberi Düzenle' : 'Yeni Haber Ekle'),
           content: SizedBox(
             width: double.maxFinite,
-            height: 500,
+            height: 600,
             child: SingleChildScrollView(
               child: Column(
                 children: [
                   TextField(
                     controller: titleController,
                     decoration: const InputDecoration(
-                      labelText: 'Başlık',
+                      labelText: 'Başlık *',
                       border: OutlineInputBorder(),
                     ),
+                    maxLines: 2,
                   ),
                   const SizedBox(height: 16),
 
@@ -473,27 +785,38 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
                     decoration: const InputDecoration(
                       labelText: 'Özet',
                       border: OutlineInputBorder(),
+                      hintText: 'Kısa özet (opsiyonel)',
                     ),
-                    maxLines: 2,
+                    maxLines: 3,
                   ),
                   const SizedBox(height: 16),
 
                   TextField(
                     controller: contentController,
                     decoration: const InputDecoration(
-                      labelText: 'İçerik',
+                      labelText: 'İçerik *',
                       border: OutlineInputBorder(),
                     ),
-                    maxLines: 4,
+                    maxLines: 8,
                   ),
                   const SizedBox(height: 16),
 
                   TextField(
                     controller: imageController,
                     decoration: const InputDecoration(
-                      labelText: 'Resim URL (İsteğe bağlı)',
+                      labelText: 'Resim URL',
                       border: OutlineInputBorder(),
-                      hintText: 'https://example.com/image.jpg',
+                      hintText: 'https://example.com/image.jpg (opsiyonel)',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: authorController,
+                    decoration: const InputDecoration(
+                      labelText: 'Yazar',
+                      border: OutlineInputBorder(),
+                      hintText: 'Haber yazarı (opsiyonel)',
                     ),
                   ),
                 ],
@@ -507,45 +830,140 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
             ),
             ElevatedButton(
               onPressed: () async {
-                if (titleController.text.trim().isEmpty ||
-                    contentController.text.trim().isEmpty) {
+                final title = titleController.text.trim();
+                final content = contentController.text.trim();
+
+                if (title.isEmpty || content.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Başlık ve içerik zorunludur!'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                   return;
                 }
 
-                try {
-                  await FirebaseFirestore.instance.collection('haberler').add({
-                    'baslik': titleController.text.trim(),
-                    'ozet': summaryController.text.trim().isEmpty
-                        ? null
-                        : summaryController.text.trim(),
-                    'icerik': contentController.text.trim(),
-                    'kategori': selectedCategory,
-                    'resimUrl': imageController.text.trim().isEmpty
-                        ? null
-                        : imageController.text.trim(),
-                    'tarih': FieldValue.serverTimestamp(),
-                    'goruntulemeSayisi': 0,
-                  });
+                Navigator.pop(context);
 
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Haber başarıyla eklendi!')),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Hata: $e')),
-                    );
-                  }
+                if (isEdit && haberId != null) {
+                  await _updateNews(haberId, {
+                    'baslik': title,
+                    'kategori': selectedCategory,
+                    'ozet': summaryController.text.trim(),
+                    'icerik': content,
+                    'resimUrl': imageController.text.trim(),
+                    'yazar': authorController.text.trim(),
+                    'guncellemeTarihi': FieldValue.serverTimestamp(),
+                  });
+                } else {
+                  await _addNews({
+                    'baslik': title,
+                    'kategori': selectedCategory,
+                    'ozet': summaryController.text.trim(),
+                    'icerik': content,
+                    'resimUrl': imageController.text.trim(),
+                    'yazar': authorController.text.trim(),
+                    'tarih': FieldValue.serverTimestamp(),
+                    'olusturanAdmin': FirebaseAuth.instance.currentUser?.email,
+                  });
                 }
               },
-              child: const Text('Ekle'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(isEdit ? 'Güncelle' : 'Ekle'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  // Haber ekleme işlemi
+  Future<void> _addNews(Map<String, dynamic> newsData) async {
+    try {
+      await FirebaseFirestore.instance.collection('haberler').add(newsData);
+
+      // Admin log kaydı
+      await AdminService.logAdminActivity(
+        action: 'NEWS_CREATED',
+        targetType: 'NEWS',
+        details: {
+          'title': newsData['baslik'],
+          'category': newsData['kategori'],
+        },
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Haber başarıyla eklendi!'),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Haber eklenemedi: $e'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  // Haber güncelleme işlemi
+  Future<void> _updateNews(String haberId, Map<String, dynamic> newsData) async {
+    try {
+      await FirebaseFirestore.instance.collection('haberler').doc(haberId).update(newsData);
+
+      // Admin log kaydı
+      await AdminService.logAdminActivity(
+        action: 'NEWS_UPDATED',
+        targetType: 'NEWS',
+        targetId: haberId,
+        details: {
+          'title': newsData['baslik'],
+          'category': newsData['kategori'],
+        },
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Haber başarıyla güncellendi!'),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Haber güncellenemedi: $e'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }

@@ -1,14 +1,17 @@
-// lib/screens/anasayfa.dart
+// lib/screens/anasayfa.dart - Admin Kontrollü Versiyon
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/analytics_wrapper.dart';  // ✅ Import eklendi
-import '../services/analytics_service.dart';  // ✅ Import eklendi
+import '../widgets/analytics_wrapper.dart';
+import '../services/analytics_service.dart';
+import '../services/admin_service.dart';
 import '../theme/app_theme.dart';
 import 'kadro_sayfasi.dart';
 import 'takvim_sayfasi.dart';
 import 'puan_durumu_sayfasi.dart';
 import 'news_page.dart';
+import 'admin_panel_screen.dart';
 
 class Anasayfa extends StatefulWidget {
   const Anasayfa({super.key});
@@ -21,6 +24,10 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
+  // Admin kontrolü için
+  bool _isAdmin = false;
+  bool _isCheckingAdmin = true;
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +39,7 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
+    _checkAdminStatus();
   }
 
   @override
@@ -40,16 +48,46 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
+  // Admin durumunu kontrol et
+  Future<void> _checkAdminStatus() async {
+    try {
+      final adminStatus = await AdminService.isCurrentUserAdmin();
+      setState(() {
+        _isAdmin = adminStatus;
+        _isCheckingAdmin = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isAdmin = false;
+        _isCheckingAdmin = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnalyticsWrapper(
       screenName: 'home_screen',
       onScreenView: () => AnalyticsService.logAppOpen(),
       child: Scaffold(
-        appBar: const CustomAppBar(
+        appBar: CustomAppBar(
           title: "Ana Sayfa",
           showBackButton: false,
-          showThemeToggle: true, // ✅ Tema butonunu göster
+          showThemeToggle: true,
+          // Admin için özel eylemler
+          actions: _isAdmin && !_isCheckingAdmin ? [
+            IconButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
+              ),
+              icon: Icon(
+                Icons.admin_panel_settings,
+                color: Colors.orange.shade600,
+              ),
+              tooltip: 'Admin Paneli',
+            ),
+          ] : null,
         ),
         body: RefreshIndicator(
           onRefresh: () async {
@@ -62,42 +100,125 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
               opacity: _fadeAnimation,
               child: Column(
                 children: [
+                  // Admin kontrol durumu bilgisi
+                  if (_isCheckingAdmin)
+                    Container(
+                      color: Colors.orange.shade50,
+                      padding: const EdgeInsets.all(8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Yetki kontrol ediliyor...',
+                            style: TextStyle(
+                              color: Colors.orange.shade700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Admin için özel bilgi çubuğu
+                  if (!_isCheckingAdmin && _isAdmin)
+                    Container(
+                      color: Colors.green.shade50,
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.admin_panel_settings,
+                              color: Colors.green.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Yönetici Modu Aktif',
+                                  style: TextStyle(
+                                    color: Colors.green.shade700,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  'İçerikleri düzenleyebilir ve yönetebilirsiniz',
+                                  style: TextStyle(
+                                    color: Colors.green.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
+                            ),
+                            child: Text(
+                              'Admin Panel',
+                              style: TextStyle(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   // Hoş geldin kartı
                   _buildWelcomeCard(),
 
                   // Son maç ve yaklaşan maç
                   _buildMatchSection(),
 
-                  // Hızlı erişim menüsü
+                  // Hızlı erişim menüsü (admin için özel)
                   _buildQuickAccessMenu(),
 
                   // Son haberler
                   _buildNewsSection(),
+
+                  // Admin için özel yönetim paneli
+                  if (!_isCheckingAdmin && _isAdmin) _buildAdminQuickActions(),
                 ],
               ),
             ),
           ),
         ),
-      ), // ✅ Bu parantez eksikti!
+      ),
     );
   }
 
   // Hoş geldin kartı
   Widget _buildWelcomeCard() {
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Taraftar';
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.primaryGreen, AppTheme.primaryGreen.withOpacity(0.8)],
+        gradient: const LinearGradient(
+          colors: [AppTheme.primaryGreen, Color(0xFF006D2C)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.3),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
@@ -108,8 +229,16 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Merhaba Taraftar!',
+                Text(
+                  'Hoş geldin,',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  displayName,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -118,26 +247,30 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Kocaelispor\'un en güncel haberlerini takip et',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 16,
+                  _isAdmin ? '🔧 Yönetici Paneline Erişim Var' : '⚽ Kocaelispor\'a Hoş Geldin!',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(
-            Icons.sports_soccer,
-            color: Colors.white,
-            size: 48,
+          const CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.white24,
+            child: Icon(
+              Icons.sports_soccer,
+              color: Colors.white,
+              size: 32,
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Son maç bölümü
+  // Son maçlar bölümü
   Widget _buildMatchSection() {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -145,48 +278,70 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Maçlar',
+            'Son Maçlar',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _buildMatchCard('Son Maç', 'Kocaelispor 2-1 Rizespor', true)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildMatchCard('Sonraki Maç', 'Kocaelispor - Trabzonspor', false)),
-            ],
+
+          // Son maç kartı (örnek)
+          _buildMatchCard(
+            'Kocaelispor',
+            'Bursaspor',
+            '2-1',
+            DateTime.now().subtract(const Duration(days: 3)),
+            true,
+          ),
+          const SizedBox(height: 8),
+
+          // Yaklaşan maç kartı (örnek)
+          _buildMatchCard(
+            'Kocaelispor',
+            'Galatasaray',
+            'VS',
+            DateTime.now().add(const Duration(days: 5)),
+            false,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMatchCard(String title, String match, bool isResult) {
+  Widget _buildMatchCard(String team1, String team2, String score, DateTime date, bool isResult) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child: Row(
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey,
+            Expanded(
+              child: Text(
+                team1,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              match,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isResult ? Colors.green.shade50 : Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
               ),
-              textAlign: TextAlign.center,
+              child: Text(
+                score,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isResult ? Colors.green.shade700 : Colors.orange.shade700,
+                ),
+              ),
             ),
-            const SizedBox(height: 8),
+            Expanded(
+              child: Text(
+                team2,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+            ),
             Icon(
               isResult ? Icons.check_circle : Icons.schedule,
               color: isResult ? Colors.green : Colors.orange,
@@ -197,7 +352,7 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
     );
   }
 
-  // Hızlı erişim menüsü
+  // Hızlı erişim menüsü (admin için özel seçenekler ile)
   Widget _buildQuickAccessMenu() {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -286,15 +441,17 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
                 ),
               ),
               TextButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NewsPage()),
-                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NewsPage()),
+                  );
+                },
                 child: const Text('Tümünü Gör'),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('haberler')
@@ -302,14 +459,46 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
                 .limit(3)
                 .snapshots(),
             builder: (context, snapshot) {
-              if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return _buildEmptyNewsCard();
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                  ),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.article_outlined, size: 48, color: Colors.grey),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Henüz haber yok',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                        if (_isAdmin) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Admin olarak ilk haberi ekleyebilirsiniz',
+                            style: TextStyle(
+                              color: Colors.green.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
               }
 
               return Column(
-                children: snapshot.data!.docs.map((doc) {
-                  final haber = doc.data() as Map<String, dynamic>;
-                  return _buildNewsItem(haber);
+                children: snapshot.data!.docs.take(3).map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return _buildNewsPreviewCard(data);
                 }).toList(),
               );
             },
@@ -319,8 +508,8 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildNewsItem(Map<String, dynamic> haber) {
-    final tarih = haber['tarih'] as Timestamp?;
+  Widget _buildNewsPreviewCard(Map<String, dynamic> newsData) {
+    final tarih = newsData['tarih'] as Timestamp?;
     final formattedDate = tarih != null
         ? "${tarih.toDate().day}.${tarih.toDate().month}.${tarih.toDate().year}"
         : 'Tarih yok';
@@ -328,44 +517,159 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: AppTheme.primaryGreen,
-          child: const Icon(Icons.article, color: Colors.white, size: 20),
+        leading: newsData['resimUrl'] != null && newsData['resimUrl'].toString().isNotEmpty
+            ? ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            newsData['resimUrl'],
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 60,
+                height: 60,
+                color: Colors.grey.shade200,
+                child: const Icon(Icons.image, color: Colors.grey),
+              );
+            },
+          ),
+        )
+            : Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: AppTheme.primaryGreen.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(
+            Icons.article,
+            color: AppTheme.primaryGreen,
+          ),
         ),
         title: Text(
-          haber['baslik'] ?? 'Başlık Yok',
+          newsData['baslik'] ?? 'Başlık Yok',
+          style: const TextStyle(fontWeight: FontWeight.w600),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text(formattedDate),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        subtitle: Text(
+          formattedDate,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+        ),
         onTap: () {
-          // Haber detayına git
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NewsPage()),
+          );
         },
       ),
     );
   }
 
-  Widget _buildEmptyNewsCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Icon(
-              Icons.article_outlined,
-              size: 48,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Henüz haber bulunmuyor',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 16,
+  // Admin için özel hızlı eylemler paneli
+  Widget _buildAdminQuickActions() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.admin_panel_settings, color: Colors.orange.shade700),
+              const SizedBox(width: 8),
+              Text(
+                'Yönetici Hızlı Eylemler',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade700,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          const SizedBox(height: 16),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 2.5,
+            children: [
+              _buildAdminActionCard(
+                'Haber Ekle',
+                Icons.add_circle,
+                Colors.blue,
+                    () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NewsPage()),
+                ),
+              ),
+              _buildAdminActionCard(
+                'Puan Güncelle',
+                Icons.table_chart,
+                Colors.green,
+                    () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PuanDurumuSayfasi()),
+                ),
+              ),
+              _buildAdminActionCard(
+                'Oyuncu Ekle',
+                Icons.person_add,
+                Colors.purple,
+                    () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const KadroSayfasi()),
+                ),
+              ),
+              _buildAdminActionCard(
+                'Admin Panel',
+                Icons.dashboard,
+                Colors.orange,
+                    () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

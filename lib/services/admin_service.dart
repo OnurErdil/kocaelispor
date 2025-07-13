@@ -1,4 +1,5 @@
-// lib/services/admin_service.dart
+// lib/services/admin_service.dart - Düzeltilmiş Versiyon
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -6,7 +7,7 @@ class AdminService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Kullanıcının admin olup olmadığını kontrol et
+  // Kullanıcının admin olup olmadığını kontrol et (hem string hem boolean destekler)
   static Future<bool> isCurrentUserAdmin() async {
     try {
       final user = _auth.currentUser;
@@ -16,7 +17,27 @@ class AdminService {
       if (!userDoc.exists) return false;
 
       final userData = userDoc.data() as Map<String, dynamic>;
-      return userData['isAdmin'] == true;
+
+      // Hem boolean hem string destekle
+      final adminValue = userData['isAdmin'];
+
+      // Boolean kontrolü
+      if (adminValue is bool) {
+        return adminValue;
+      }
+
+      // String kontrolü ("true", "True", "TRUE" vs.)
+      if (adminValue is String) {
+        return adminValue.toLowerCase().trim() == 'true';
+      }
+
+      // Role kontrolü (ekstra güvenlik)
+      final roleValue = userData['role'];
+      if (roleValue is String) {
+        return roleValue.toLowerCase().trim() == 'admin';
+      }
+
+      return false;
     } catch (e) {
       print('Admin kontrolü hatası: $e');
       return false;
@@ -70,7 +91,7 @@ class AdminService {
       stats['totalNews'] = newsSnapshot.docs.length;
 
       // Oyuncu sayısı
-      final playersSnapshot = await _firestore.collection('oyuncular').get();
+      final playersSnapshot = await _firestore.collection('Takım').get();
       stats['totalPlayers'] = playersSnapshot.docs.length;
 
       // Maç sayısı
@@ -105,8 +126,12 @@ class AdminService {
 
       final userDoc = usersQuery.docs.first;
 
-      // Admin yetkisi ver
-      await userDoc.reference.update({'isAdmin': true});
+      // Admin yap (hem boolean hem string güncelle)
+      await userDoc.reference.update({
+        'isAdmin': true,  // Boolean
+        'role': 'admin',  // String (ek güvenlik)
+        'adminSince': FieldValue.serverTimestamp(),
+      });
 
       print('Kullanıcı admin yapıldı: $email');
       return true;
@@ -119,7 +144,6 @@ class AdminService {
   // Admin yetkisini kaldır
   static Future<bool> removeAdminRole(String email) async {
     try {
-      // E-posta ile kullanıcı bul
       final usersQuery = await _firestore
           .collection('users')
           .where('email', isEqualTo: email)
@@ -133,7 +157,11 @@ class AdminService {
       final userDoc = usersQuery.docs.first;
 
       // Admin yetkisini kaldır
-      await userDoc.reference.update({'isAdmin': false});
+      await userDoc.reference.update({
+        'isAdmin': false,
+        'role': 'user',
+        'adminRemovedAt': FieldValue.serverTimestamp(),
+      });
 
       print('Admin yetkisi kaldırıldı: $email');
       return true;
@@ -185,7 +213,8 @@ class AdminService {
           'email': user.email,
           'displayName': user.displayName,
           'photoURL': user.photoURL,
-          'isAdmin': false, // Varsayılan olarak admin değil
+          'isAdmin': false, // Boolean olarak false
+          'role': 'user',   // String olarak user
           'createdAt': FieldValue.serverTimestamp(),
           'lastLoginAt': FieldValue.serverTimestamp(),
         });
@@ -199,108 +228,38 @@ class AdminService {
 
         print('Kullanıcı girişi güncellendi: ${user.email}');
       }
-
-      // Admin panel erişimi logla (admin ise)
-      final userData = docSnapshot.exists ? docSnapshot.data() as Map<String, dynamic> : {'isAdmin': false};
-      if (userData['isAdmin'] == true) {
-        await logAdminActivity(
-          action: 'ADMIN_LOGIN',
-          targetType: 'SYSTEM',
-          targetId: user.uid,
-        );
-      }
     } catch (e) {
-      print('Kullanıcı kurulum hatası: $e');
+      print('Kullanıcı setup hatası: $e');
     }
   }
 
-  // İlk admin kullanıcıyı oluştur (geliştirme amaçlı)
-  static Future<void> createFirstAdmin(String email) async {
+  // Debug: Kullanıcının admin durumunu kontrol et
+  static Future<void> debugCheckAdminStatus() async {
     try {
-      final usersQuery = await _firestore
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .get();
-
-      if (usersQuery.docs.isNotEmpty) {
-        final userDoc = usersQuery.docs.first;
-        await userDoc.reference.update({'isAdmin': true});
-
-        await logAdminActivity(
-          action: 'FIRST_ADMIN_CREATED',
-          targetType: 'USER',
-          targetId: email,
-        );
-
-        print('İlk admin oluşturuldu: $email');
-      } else {
-        print('Kullanıcı bulunamadı: $email');
-      }
-    } catch (e) {
-      print('İlk admin oluşturma hatası: $e');
-    }
-  }
-
-  // Tüm adminleri listele
-  static Future<List<Map<String, dynamic>>> getAllAdmins() async {
-    try {
-      final adminQuery = await _firestore
-          .collection('users')
-          .where('isAdmin', isEqualTo: true)
-          .get();
-
-      return adminQuery.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-    } catch (e) {
-      print('Admin listesi yükleme hatası: $e');
-      return [];
-    }
-  }
-
-  // Admin loglarını temizle (eski logları sil)
-  static Future<void> cleanOldLogs({int daysToKeep = 30}) async {
-    try {
-      final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
-      final cutoffTimestamp = Timestamp.fromDate(cutoffDate);
-
-      final oldLogsQuery = await _firestore
-          .collection('admin_logs')
-          .where('timestamp', isLessThan: cutoffTimestamp)
-          .get();
-
-      final batch = _firestore.batch();
-      for (final doc in oldLogsQuery.docs) {
-        batch.delete(doc.reference);
+      final user = _auth.currentUser;
+      if (user == null) {
+        print('🚫 Kullanıcı giriş yapmamış');
+        return;
       }
 
-      await batch.commit();
-      print('${oldLogsQuery.docs.length} eski log temizlendi');
-    } catch (e) {
-      print('Log temizleme hatası: $e');
-    }
-  }
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) {
+        print('🚫 Kullanıcı dokümanı bulunamadı');
+        return;
+      }
 
-  // Kullanıcı sayısı istatistikleri
-  static Future<Map<String, int>> getUserStats() async {
-    try {
-      final usersSnapshot = await _firestore.collection('users').get();
-      int totalUsers = usersSnapshot.docs.length;
-      int adminUsers = usersSnapshot.docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return data['isAdmin'] == true;
-      }).length;
+      final userData = userDoc.data() as Map<String, dynamic>;
+      print('📋 Kullanıcı Bilgileri:');
+      print('   Email: ${user.email}');
+      print('   UID: ${user.uid}');
+      print('   isAdmin: ${userData['isAdmin']} (${userData['isAdmin'].runtimeType})');
+      print('   role: ${userData['role']}');
 
-      return {
-        'totalUsers': totalUsers,
-        'adminUsers': adminUsers,
-        'regularUsers': totalUsers - adminUsers,
-      };
+      final isAdmin = await isCurrentUserAdmin();
+      print('   Admin Kontrolü: $isAdmin');
+
     } catch (e) {
-      print('Kullanıcı istatistik hatası: $e');
-      return {'totalUsers': 0, 'adminUsers': 0, 'regularUsers': 0};
+      print('❌ Debug kontrol hatası: $e');
     }
   }
 }
