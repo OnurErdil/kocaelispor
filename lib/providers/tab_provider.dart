@@ -6,25 +6,26 @@ class TabProvider extends ChangeNotifier {
   PageController? _pageController;
 
   int get currentIndex => _currentIndex;
+  PageController? get pageController => _pageController;
 
   void setPageController(PageController controller) {
     _pageController = controller;
   }
 
+  void setCurrentIndex(int index) {
+    _currentIndex = index;
+    notifyListeners();
+  }
+
   void changeTab(int index) {
-    if (_currentIndex != index && _pageController != null) {
+    if (_currentIndex != index) {
       _currentIndex = index;
-      _pageController!.animateToPage(
+      _pageController?.animateToPage(
         index,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
       notifyListeners();
     }
-  }
-
-  void updateIndex(int index) {
-    _currentIndex = index;
-    notifyListeners();
   }
 }

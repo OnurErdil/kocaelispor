@@ -67,6 +67,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '795646490074',
     projectId: 'kocaelispor-fan-mobil',
     storageBucket: 'kocaelispor-fan-mobil.firebasestorage.app',
+    iosClientId: '795646490074-ic06v5lrj0e94u8s3uea5duttvbl8mfu.apps.googleusercontent.com',
     iosBundleId: 'com.example.kocaelispor1966Mobil',
   );
 
@@ -76,6 +77,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '795646490074',
     projectId: 'kocaelispor-fan-mobil',
     storageBucket: 'kocaelispor-fan-mobil.firebasestorage.app',
+    iosClientId: '795646490074-ic06v5lrj0e94u8s3uea5duttvbl8mfu.apps.googleusercontent.com',
     iosBundleId: 'com.example.kocaelispor1966Mobil',
   );
 

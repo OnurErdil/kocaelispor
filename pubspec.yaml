@@ -7,7 +7,7 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
-  # Mevcut bağımlılıklar...
+  http: ^1.1.0  # Bildirim gönderme için
   flutter_local_notifications: ^17.0.0
   firebase_messaging: ^14.7.10
   permission_handler: ^11.0.1

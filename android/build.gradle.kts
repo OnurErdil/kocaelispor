@@ -1,3 +1,5 @@
+// android/build.gradle.kts - DÜZELTİLMİŞ SÜRÜM
+
 allprojects {
     repositories {
         google()
@@ -12,6 +14,7 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }
@@ -19,8 +22,10 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+// ✅ DÜZELTİLMİŞ BÖLÜM - Kotlin syntax
 buildscript {
     dependencies {
-        classpath 'com.google.gms:google-services:4.3.15'  // versiyon uyumlu olmalı
+        classpath("com.google.gms:google-services:4.3.15")  // Kotlin syntax: parantez kullanın
     }
 }

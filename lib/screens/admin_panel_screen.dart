@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/custom_app_bar.dart';
 import '../theme/app_theme.dart';
 import '../services/admin_service.dart';
+import 'admin_notification_panel.dart';
+
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key}); // ✅ CONST EKLENDİ
@@ -110,7 +112,56 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       ],
     );
   }
-
+  Widget _buildNotificationCard() {
+    return Card(
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AdminNotificationPanel(),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.notifications_active,
+                  size: 32,
+                  color: Colors.purple.shade600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Push Bildirimler',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Kullanıcılara bildirim gönder',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
   Widget _buildQuickActionsCard() {
     return Card(
       elevation: 4,
@@ -134,26 +185,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               children: [
                 Expanded(
                   child: _ActionButton(
-                    icon: Icons.admin_panel_settings,
-                    label: 'Admin Yap',
-                    onPressed: _showMakeAdminDialog,
-                    color: Colors.purple,
+                    icon: Icons.notifications_active,
+                    label: 'Push Bildirim',
+                    onPressed: _openNotificationPanel,  // ✅ YENİ METOD
+                    color: Colors.orange,
                   ),
                 ),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.article_outlined,
-                    label: 'Haber Ekle',
-                    onPressed: _showAddNewsDialog,
-                    color: Colors.blue,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.person_add,
@@ -162,19 +200,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     color: Colors.green,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.sports_soccer,
-                    label: 'Maç Ekle',
-                    onPressed: _showAddMatchDialog,
-                    color: Colors.orange,
-                  ),
-                ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+  void _openNotificationPanel() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AdminNotificationPanel(),
       ),
     );
   }
@@ -364,7 +401,40 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       ),
     );
   }
-
+  Widget _ActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    required Color color,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color.withOpacity(0.1),
+        foregroundColor: color,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: color.withOpacity(0.3)),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 24),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
