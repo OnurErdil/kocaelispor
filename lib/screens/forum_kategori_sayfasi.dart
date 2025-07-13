@@ -1,45 +1,100 @@
-// lib/screens/forum_kategori_sayfasi.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../widgets/custom_app_bar.dart';
 import '../theme/app_theme.dart';
 import '../models/forum_models.dart';
-import '../services/forum_service.dart';
-import 'forum_konu_sayfasi.dart';
-import 'konu_olustur_sayfasi.dart';
 
-class ForumKategoriSayfasi extends StatefulWidget {
-  final ForumKategori kategori;
+class ForumKonuSayfasi extends StatefulWidget {
+  final ForumKonu konu;
 
-  const ForumKategoriSayfasi({super.key, required this.kategori});
+  const ForumKonuSayfasi({super.key, required this.konu});
 
   @override
-  State<ForumKategoriSayfasi> createState() => _ForumKategoriSayfasiState();
+  State<ForumKonuSayfasi> createState() => _ForumKonuSayfasiState();
 }
 
-class _ForumKategoriSayfasiState extends State<ForumKategoriSayfasi> {
+class _ForumKonuSayfasiState extends State<ForumKonuSayfasi> {
+  final TextEditingController _mesajController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  bool _isLoading = false;
+
+  final List<String> _availableReactions = ['👍', '❤️', '⚽', '🔥', '😍', '👏'];
+
+  // 🔧 GÜVENLİ TİP DÖNÜŞÜM FONKSİYONLARI
+  String _safeStringValue(dynamic value, String defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is String) return value;
+    return value.toString();
+  }
+
+  DateTime _safeDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return DateTime.now();
+  }
+
+  bool _safeBoolValue(dynamic value, bool defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is bool) return value;
+    if (value is String) {
+      return value.toLowerCase() == 'true';
+    }
+    return defaultValue;
+  }
+
+  @override
+  void dispose() {
+    _mesajController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: widget.kategori.ad,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _yeniKonuOlustur(),
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Yeni Konu'),
+        title: widget.konu.baslik,
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: _handleMenuAction,
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'refresh',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh, size: 18),
+                    SizedBox(width: 8),
+                    Text('Yenile'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'report',
+                child: Row(
+                  children: [
+                    Icon(Icons.report, size: 18),
+                    SizedBox(width: 8),
+                    Text('Şikayet Et'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // Kategori başlığı ve bilgileri
-          _buildKategoriBilgi(),
-
-          // Konular listesi
+          _buildKonuBilgi(),
           Expanded(
-            child: StreamBuilder<List<ForumKonu>>(
-              stream: ForumService.getKonular(widget.kategori.id),
+            child: StreamBuilder<QuerySnapshot>(
+              // 🔥 INDEX GEREKTİRMEYEN SORGU - sadece konuId ile filtrele
+              stream: FirebaseFirestore.instance
+                  .collection('forum_mesajlari')
+                  .where('konuId', isEqualTo: widget.konu.id)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -50,333 +105,377 @@ class _ForumKategoriSayfasiState extends State<ForumKategoriSayfasi> {
                 }
 
                 if (snapshot.hasError) {
-                  return _buildErrorWidget('Konular yüklenirken hata oluştu');
+                  return _buildErrorWidget('Mesajlar yüklenirken hata oluştu: ${snapshot.error}');
                 }
 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return _buildEmptyWidget();
                 }
 
-                final konular = snapshot.data!;
+                // 🔥 MANUEL SIRALAMA - tarihe göre sırala (eski mesajlar önce)
+                var docs = snapshot.data!.docs.toList();
+                docs.sort((a, b) {
+                  final aData = a.data() as Map<String, dynamic>;
+                  final bData = b.data() as Map<String, dynamic>;
 
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    setState(() {});
+                  final aTarih = _safeDateTime(aData['tarih']);
+                  final bTarih = _safeDateTime(bData['tarih']);
+
+                  return aTarih.compareTo(bTarih); // Eski mesajlar önce
+                });
+
+                // Sayfa açıldığında en alta kaydır
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateToEnd();
+                  }
+                });
+
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    return _buildMesajCard(data, docs[index].id);
                   },
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: konular.length,
-                    itemBuilder: (context, index) {
-                      final konu = konular[index];
-                      return _buildKonuCard(konu);
-                    },
-                  ),
                 );
               },
             ),
           ),
+          _buildMesajYazmaAlani(),
         ],
       ),
     );
   }
 
-  Widget _buildKategoriBilgi() {
+  Widget _buildKonuBilgi() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            widget.kategori.renk,
-            widget.kategori.renk.withValues(alpha: 0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: Colors.grey[50],
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
         ),
-        borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              widget.kategori.ikon,
-              color: Colors.white,
-              size: 24,
+          Text(
+            widget.konu.baslik,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(width: 16),
+          if (widget.konu.aciklama != null && widget.konu.aciklama!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              widget.konu.aciklama!,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(
+                Icons.person_outline,
+                size: 16,
+                color: Colors.grey[600],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                widget.konu.olusturanAd,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Icon(
+                Icons.access_time,
+                size: 16,
+                color: Colors.grey[600],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _formatTarih(widget.konu.olusturmaTarihi),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Icon(
+                Icons.visibility_outlined,
+                size: 16,
+                color: Colors.grey[600],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '${widget.konu.goruntulemeSayisi} görüntüleme',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMesajCard(Map<String, dynamic> data, String mesajId) {
+    final icerik = _safeStringValue(data['icerik'], '');
+    final gonderenAd = _safeStringValue(data['gonderenAd'], 'Anonim');
+    final gonderenId = _safeStringValue(data['gonderenId'], '');
+    final gonderenFoto = _safeStringValue(data['gonderenFoto'], '');
+    final tarih = _safeDateTime(data['tarih']);
+    final duzenlendiMi = _safeBoolValue(data['duzenlendiMi'], false);
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final benimMesajim = gonderenId == currentUser?.uid;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Profil fotoğrafı
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AppTheme.primaryGreen,
+            backgroundImage: gonderenFoto.isNotEmpty
+                ? NetworkImage(gonderenFoto)
+                : null,
+            child: gonderenFoto.isEmpty
+                ? Text(
+              gonderenAd.isNotEmpty ? gonderenAd[0].toUpperCase() : '?',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            )
+                : null,
+          ),
+
+          const SizedBox(width: 12),
+
+          // Mesaj içeriği
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.kategori.ad,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.kategori.aciklama,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 8),
+                // Kullanıcı adı ve tarih
                 Row(
                   children: [
-                    _buildStatChip(
-                      Icons.topic,
-                      '${widget.kategori.konuSayisi} konu',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildStatChip(
-                      Icons.message,
-                      '${widget.kategori.mesajSayisi} mesaj',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: Colors.white),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildKonuCard(ForumKonu konu) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: InkWell(
-          onTap: () => _konuyaGit(konu),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Konu başlığı ve etiketler
-                Row(
-                  children: [
-                    // Sabitlenmis ikonu
-                    if (konu.sabitlenmis)
-                      Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        child: Icon(
-                          Icons.push_pin,
-                          size: 16,
-                          color: Colors.orange[600],
-                        ),
-                      ),
-
-                    // Kilitli ikonu
-                    if (konu.kilitli)
-                      Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        child: Icon(
-                          Icons.lock,
-                          size: 16,
-                          color: Colors.red[600],
-                        ),
-                      ),
-
-                    // Başlık
-                    Expanded(
-                      child: Text(
-                        konu.baslik,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: konu.sabitlenmis ? FontWeight.bold : FontWeight.w600,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      gonderenAd,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: benimMesajim ? AppTheme.primaryGreen : Colors.black87,
                       ),
                     ),
-
-                    // Etiket
-                    if (konu.etiket != null && konu.etiket!.isNotEmpty)
+                    if (benimMesajim) ...[
+                      const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: konu.etiketRengi.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: konu.etiketRengi.withValues(alpha: 0.3),
-                          ),
+                          color: AppTheme.primaryGreen,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          konu.etiketMetni,
+                        child: const Text(
+                          'Sen',
                           style: TextStyle(
                             fontSize: 10,
-                            color: konu.etiketRengi,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                  ],
-                ),
-
-                // Açıklama (varsa)
-                if (konu.aciklama != null && konu.aciklama!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    konu.aciklama!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-
-                const SizedBox(height: 12),
-
-                // Alt bilgiler
-                Row(
-                  children: [
-                    // Oluşturan kişi
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundColor: AppTheme.primaryGreen,
-                      backgroundImage: konu.olusturanFoto != null
-                          ? NetworkImage(konu.olusturanFoto!)
-                          : null,
-                      child: konu.olusturanFoto == null
-                          ? Text(
-                        konu.olusturanAd[0].toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
-                          : null,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            konu.olusturanAd,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          Text(
-                            _formatTarih(konu.olusturmaTarihi),
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // İstatistikler
-                    _buildKonuStatistik(
-                      Icons.message_outlined,
-                      konu.mesajSayisi.toString(),
-                      Colors.blue,
-                    ),
-                    const SizedBox(width: 12),
-                    _buildKonuStatistik(
-                      Icons.visibility_outlined,
-                      konu.goruntulemeSayisi.toString(),
-                      Colors.green,
-                    ),
-
-                    // Son mesaj bilgisi
-                    if (konu.sonMesajTarihi != null) ...[
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Son mesaj:',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                          Text(
-                            _formatTarih(konu.sonMesajTarihi!),
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
+                    const Spacer(),
+                    Text(
+                      _formatTarih(tarih),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
                   ],
                 ),
+
+                const SizedBox(height: 6),
+
+                // Mesaj içeriği
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: benimMesajim
+                        ? AppTheme.primaryGreen.withOpacity(0.1)
+                        : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                    border: benimMesajim
+                        ? Border.all(color: AppTheme.primaryGreen.withOpacity(0.3))
+                        : null,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        icerik,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (duzenlendiMi) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '(düzenlendi)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // Reaction butonları
+                const SizedBox(height: 8),
+                _buildReactionButtons(mesajId),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildKonuStatistik(IconData icon, String value, Color color) {
+  Widget _buildReactionButtons(String mesajId) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 2),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-            fontWeight: FontWeight.w500,
+        // Beğeni butonu
+        IconButton(
+          onPressed: () => _toggleLike(mesajId),
+          icon: const Icon(Icons.thumb_up_outlined),
+          iconSize: 18,
+          color: Colors.grey[600],
+        ),
+
+        // Yanıtla butonu
+        IconButton(
+          onPressed: () => _yanitla(mesajId),
+          icon: const Icon(Icons.reply_outlined),
+          iconSize: 18,
+          color: Colors.grey[600],
+        ),
+
+        // Daha fazla
+        PopupMenuButton<String>(
+          onSelected: (value) => _handleMesajAction(value, mesajId),
+          icon: Icon(
+            Icons.more_horiz,
+            size: 18,
+            color: Colors.grey[600],
           ),
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'copy',
+              child: Row(
+                children: [
+                  Icon(Icons.copy, size: 16),
+                  SizedBox(width: 8),
+                  Text('Kopyala'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'report',
+              child: Row(
+                children: [
+                  Icon(Icons.report, size: 16),
+                  SizedBox(width: 8),
+                  Text('Şikayet Et'),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildMesajYazmaAlani() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 5,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _mesajController,
+                maxLines: null,
+                decoration: InputDecoration(
+                  hintText: 'Mesajınızı yazın...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25),
+                    borderSide: const BorderSide(
+                      color: AppTheme.primaryGreen,
+                      width: 2,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            FloatingActionButton.small(
+              onPressed: _isLoading ? null : _mesajGonder,
+              backgroundColor: AppTheme.primaryGreen,
+              child: _isLoading
+                  ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+                  : const Icon(Icons.send, color: Colors.white),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -386,13 +485,13 @@ class _ForumKategoriSayfasiState extends State<ForumKategoriSayfasi> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.topic_outlined,
+            Icons.message_outlined,
             size: 64,
-            color: widget.kategori.renk.withValues(alpha: 0.5),
+            color: Colors.grey[400],
           ),
           const SizedBox(height: 16),
           Text(
-            'Henüz konu yok',
+            'Henüz mesaj yok',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -400,20 +499,10 @@ class _ForumKategoriSayfasiState extends State<ForumKategoriSayfasi> {
           ),
           const SizedBox(height: 8),
           Text(
-            'İlk konuyu sen aç!',
+            'İlk mesajı sen yaz!',
             style: TextStyle(
               color: Colors.grey[500],
             ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _yeniKonuOlustur(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: widget.kategori.renk,
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.add),
-            label: const Text('İlk Konuyu Oluştur'),
           ),
         ],
       ),
@@ -446,38 +535,97 @@ class _ForumKategoriSayfasiState extends State<ForumKategoriSayfasi> {
     );
   }
 
-  void _yeniKonuOlustur() {
+  Future<void> _mesajGonder() async {
+    if (_mesajController.text.trim().isEmpty) return;
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Konu oluşturmak için giriş yapmalısınız'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Mesaj göndermek için giriş yapmalısınız', true);
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => KonuOlusturSayfasi(kategori: widget.kategori),
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseFirestore.instance.collection('forum_mesajlari').add({
+        'icerik': _mesajController.text.trim(),
+        'konuId': widget.konu.id,
+        'gonderenId': user.uid,
+        'gonderenAd': user.displayName ?? 'Kocaelispor Taraftarı',
+        'gonderenFoto': user.photoURL,
+        'tarih': FieldValue.serverTimestamp(),
+        'duzenlendiMi': false,
+      });
+
+      // Mesaj kutusunu temizle
+      _mesajController.clear();
+
+      // Konunun mesaj sayısını artır
+      await FirebaseFirestore.instance
+          .collection('forum_konulari')
+          .doc(widget.konu.id)
+          .update({
+        'mesajSayisi': FieldValue.increment(1),
+        'sonMesajTarihi': FieldValue.serverTimestamp(),
+        'sonMesajGonderenAd': user.displayName ?? 'Kocaelispor Taraftarı',
+      });
+
+      _showSnackBar('Mesajınız gönderildi! ⚽', false);
+
+      // En alta kaydır
+      if (_scrollController.hasClients) {
+        _scrollController.animateToEnd();
+      }
+
+    } catch (e) {
+      print('Mesaj gönderme hatası: $e');
+      _showSnackBar('Mesaj gönderilemedi!', true);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showSnackBar(String message, bool isError) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : AppTheme.primaryGreen,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: isError ? 4 : 2),
       ),
     );
   }
 
-  void _konuyaGit(ForumKonu konu) async {
-    // Görüntüleme sayısını artır
-    await ForumService.konuGoruntulemeSayisiniArtir(konu.id);
-
-    if (mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ForumKonuSayfasi(konu: konu),
-        ),
-      );
+  void _handleMenuAction(String action) {
+    switch (action) {
+      case 'refresh':
+        setState(() {});
+        break;
+      case 'report':
+        _showSnackBar('Şikayet edildi', false);
+        break;
     }
+  }
+
+  void _handleMesajAction(String action, String mesajId) {
+    switch (action) {
+      case 'copy':
+        _showSnackBar('Mesaj kopyalandı', false);
+        break;
+      case 'report':
+        _showSnackBar('Mesaj şikayet edildi', false);
+        break;
+    }
+  }
+
+  void _toggleLike(String mesajId) {
+    _showSnackBar('Beğeni özelliği yakında!', false);
+  }
+
+  void _yanitla(String mesajId) {
+    _showSnackBar('Yanıtlama özelliği yakında!', false);
   }
 
   String _formatTarih(DateTime tarih) {
@@ -485,7 +633,7 @@ class _ForumKategoriSayfasiState extends State<ForumKategoriSayfasi> {
     final difference = now.difference(tarih);
 
     if (difference.inDays > 7) {
-      return '${tarih.day}/${tarih.month}/${tarih.year}';
+      return DateFormat('dd/MM/yyyy HH:mm').format(tarih);
     } else if (difference.inDays > 0) {
       return '${difference.inDays} gün önce';
     } else if (difference.inHours > 0) {
@@ -495,5 +643,16 @@ class _ForumKategoriSayfasiState extends State<ForumKategoriSayfasi> {
     } else {
       return 'Şimdi';
     }
+  }
+}
+
+// ScrollController için extension
+extension ScrollControllerExtension on ScrollController {
+  void animateToEnd() {
+    animateTo(
+      position.maxScrollExtent,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 }
