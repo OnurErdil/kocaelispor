@@ -1,4 +1,4 @@
-// lib/screens/main_screen.dart
+// lib/screens/main_screen.dart - DÜZELTILMIŞ VERSİYON
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'anasayfa.dart';
@@ -6,12 +6,12 @@ import 'kadro_sayfasi.dart';
 import 'profile_page.dart';
 import 'takvim_sayfasi.dart';
 import 'galeri_sayfasi.dart';
-import 'forum_sayfasi.dart'; // ✅ FORUM SAYFASI İMPORT
+import 'forum_sayfasi.dart';
 import 'package:provider/provider.dart';
 import '../providers/tab_provider.dart';
 
-// diğer import'lar...
 final GlobalKey<_MainScreenState> mainScreenKey = GlobalKey<_MainScreenState>();
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -23,25 +23,13 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   int _currentIndex = 0;
   late PageController _pageController;
   late AnimationController _animationController;
-  void changeTab(int index) {
-    if (_currentIndex != index) {
-      setState(() {
-        _currentIndex = index;
-      });
 
-      _pageController.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-  // ✅ FORUM SAYFASI EKLENDİ (3. SIRADA)
+  // ✅ SAYFALAR LİSTESİ (6 ADET)
   final List<Widget> _pages = [
     const Anasayfa(),        // 0
     const KadroSayfasi(),    // 1
     const TakvimSayfasi(),   // 2
-    const ForumSayfasi(),    // 3 ← YENİ EKLENEN
+    const ForumSayfasi(),    // 3
     const GaleriSayfasi(),   // 4
     const ProfilePage(),     // 5
   ];
@@ -64,7 +52,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       label: 'Takvim',
     ),
     _NavItem(
-      icon: Icons.forum_outlined, // ✅ FORUM İKONU
+      icon: Icons.forum_outlined,
       activeIcon: Icons.forum,
       label: 'Forum',
     ),
@@ -81,7 +69,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   ];
 
   @override
-  @override
   void initState() {
     super.initState();
     _pageController = PageController();
@@ -90,45 +77,59 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       vsync: this,
     );
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TabProvider>().setPageController(_pageController);
+    });
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
     _animationController.dispose();
     super.dispose();
   }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TabProvider>().setPageController(_pageController);
-    });
-  }
-  // ✅ TAB DEĞİŞTİRME FONKSİYONU
+
+  // ✅ DÜZELTILMIŞ TAB DEĞİŞTİRME FONKSİYONU
   void _onTabTapped(int index) {
+    print("🔄 Tab değiştiriliyor: $_currentIndex -> $index");
+
     if (_currentIndex == index) {
       // Aynı tab'a tekrar tıklandığında hafif titreşim
       HapticFeedback.lightImpact();
       return;
     }
 
+    // ✅ ÖNEMLİ: setState ve sayfa değiştirme işlemini birlikte yap
     setState(() {
       _currentIndex = index;
     });
 
-    // Sayfa geçişi animasyonu
-    void changeTab(int index) {
-      if (_currentIndex != index) {
-        setState(() {
-          _currentIndex = index;
-        });
-
-        _pageController.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
-    }
+    // ✅ SAYFA GEÇİŞİ ANİMASYONU
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
 
     // Hafif titreşim feedback
     HapticFeedback.selectionClick();
+
+    print("✅ Tab değiştirildi: $index");
+  }
+
+  // ✅ ALTERNATIF TAB DEĞİŞTİRME FONKSİYONU (provider ile)
+  void changeTab(int index) {
+    if (_currentIndex != index) {
+      setState(() {
+        _currentIndex = index;
+      });
+
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   @override
@@ -155,7 +156,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: _onTabTapped, // ✅ BU ÇOK ÖNEMLİ!
+          onTap: _onTabTapped, // ✅ DÜZELTILMIŞ FONKSİYON
           type: BottomNavigationBarType.fixed, // ✅ 6 ITEM İÇİN GEREKLİ
           backgroundColor: const Color(0xFF1A1A1A), // Koyu tema
           selectedItemColor: const Color(0xFF00913C), // Kocaelispor yeşili
