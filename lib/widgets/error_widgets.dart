@@ -301,7 +301,7 @@ class OfflineBanner extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.wifi_off, color: Colors.white, size: 16),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Text(
               'İnternet bağlantısı yok',
               style: TextStyle(

@@ -95,7 +95,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with TickerProvider
   Widget _buildStatsSection() {
     if (_isLoading) {
       return const Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Center(child: CircularProgressIndicator()),
       );
     }

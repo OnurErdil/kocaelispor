@@ -104,7 +104,7 @@ class _HaberlerSayfasiState extends State<HaberlerSayfasi> with SingleTickerProv
                 CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Text('Haberler yükleniyor...'),
               ],
             ),
@@ -250,7 +250,7 @@ class _HaberlerSayfasiState extends State<HaberlerSayfasi> with SingleTickerProv
                           ),
                           child: const Text(
                             'ÖNEMLİ',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 10,
                               color: Colors.white,
                               fontWeight: FontWeight.bold,

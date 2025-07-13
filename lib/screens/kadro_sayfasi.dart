@@ -76,7 +76,7 @@ class KadroSayfasi extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.people_outline, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text('Henüz oyuncu eklenmemiş'),
           Text('Yeni oyuncu eklemek için + butonuna basın'),
         ],
@@ -269,7 +269,7 @@ class PlayerCard extends StatelessWidget {
           child: Row(
             children: [
               Icon(Icons.edit, size: 20),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text('Düzenle'),
             ],
           ),
@@ -279,7 +279,7 @@ class PlayerCard extends StatelessWidget {
           child: Row(
             children: [
               Icon(Icons.delete, size: 20, color: Colors.red),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text('Sil', style: TextStyle(color: Colors.red)),
             ],
           ),

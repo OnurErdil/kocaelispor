@@ -24,7 +24,7 @@ class TakvimSayfasi extends StatelessWidget {
           children: [
             const Text(
               "Fikstür & Sonuçlar",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
@@ -229,10 +229,10 @@ class TakvimSayfasi extends StatelessWidget {
       child: const Column(
         children: [
           CircularProgressIndicator(),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             "Maç bilgileri yükleniyor...",
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ],
       ),

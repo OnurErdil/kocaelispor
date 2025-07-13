@@ -25,7 +25,7 @@ class _AnalyticsDebugPageState extends State<AnalyticsDebugPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Test butonları
+            // Test butonları başlığı
             Text(
               "Test Analytics Events",
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -105,7 +105,7 @@ class _AnalyticsDebugPageState extends State<AnalyticsDebugPage> {
                   child: Text(
                     "Henüz event yok.\nTest butonlarına tıklayın!",
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 14,
                     ),
@@ -132,13 +132,15 @@ class _AnalyticsDebugPageState extends State<AnalyticsDebugPage> {
 
             const SizedBox(height: 16),
 
-            // Firebase Console linki
+            // Firebase Console bilgi kartı
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.primaryGreen.withOpacity(0.1),
+                color: AppTheme.primaryGreen.withValues(alpha: 0.1), // ✅ withOpacity → withValues
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.3)),
+                border: Border.all(
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.3), // ✅ withOpacity → withValues
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,7 +155,7 @@ class _AnalyticsDebugPageState extends State<AnalyticsDebugPage> {
                       const SizedBox(width: 8),
                       Text(
                         "Firebase Console",
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppTheme.primaryGreen,
                           fontWeight: FontWeight.bold,
                         ),
@@ -163,7 +165,7 @@ class _AnalyticsDebugPageState extends State<AnalyticsDebugPage> {
                   const SizedBox(height: 8),
                   const Text(
                     "Analytics verilerini gerçek zamanlı görmek için Firebase Console > Analytics bölümüne gidin.",
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.black87,
                     ),

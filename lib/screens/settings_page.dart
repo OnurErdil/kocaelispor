@@ -536,7 +536,7 @@ class _SettingsPageState extends State<SettingsPage> with ConnectivityMixin {
         content: Row(
           children: [
             CircularProgressIndicator(),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Text('Bağlantı test ediliyor...'),
           ],
         ),
@@ -671,12 +671,12 @@ class _SettingsPageState extends State<SettingsPage> with ConnectivityMixin {
         content: Row(
           children: [
             Icon(Icons.wifi, color: Colors.white),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Text('İnternet bağlantısı geri geldi'),
           ],
         ),
         backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -689,12 +689,12 @@ class _SettingsPageState extends State<SettingsPage> with ConnectivityMixin {
         content: Row(
           children: [
             Icon(Icons.wifi_off, color: Colors.white),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Text('İnternet bağlantısı kesildi'),
           ],
         ),
         backgroundColor: Colors.orange,
-        duration: Duration(seconds: 3),
+        duration: const Duration(seconds: 3),
       ),
     );
   }

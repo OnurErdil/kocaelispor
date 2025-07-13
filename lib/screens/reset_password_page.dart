@@ -44,7 +44,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Şifre sıfırlama maili gönderildi! E-postanızı kontrol ediniz."),
-            duration: Duration(seconds: 4),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -103,7 +103,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               const SizedBox(height: 20),
               const Text(
                 "Şifrenizi mi Unuttunuz?",
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 28,
                   color: Color(0xFF00913C),
                   fontWeight: FontWeight.bold,
@@ -112,7 +112,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               const SizedBox(height: 8),
               const Text(
                 "E-posta adresinizi girin, size şifre sıfırlama linki gönderelim.",
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   color: Colors.grey,
                 ),

@@ -157,7 +157,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             content: const Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text("Doğrulama e-postası gönderildi!"),
               ],
             ),
@@ -253,7 +253,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.person_off, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               "Kullanıcı bulunamadı!",
               style: TextStyle(fontSize: 18, color: Colors.grey),
@@ -379,7 +379,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                     color: Colors.white,
                                     size: 16,
                                   ),
-                                  SizedBox(width: 4),
+                                  const SizedBox(width: 4),
                                   Text(
                                     'Admin',
                                     style: TextStyle(

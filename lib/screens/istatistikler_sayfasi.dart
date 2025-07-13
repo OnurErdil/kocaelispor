@@ -48,7 +48,7 @@ class _IstatistiklerSayfasiState extends State<IstatistiklerSayfasi> {
             CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text('İstatistikler yükleniyor...'),
           ],
         ),
@@ -72,7 +72,7 @@ class _IstatistiklerSayfasiState extends State<IstatistiklerSayfasi> {
                   const SizedBox(width: 12),
                   const Text(
                     'Taraftar İstatistikleri',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -123,7 +123,7 @@ class _IstatistiklerSayfasiState extends State<IstatistiklerSayfasi> {
               if (_statistics?['mostActiveUser'] != null) ...[
                 const Text(
                   'En Aktif Taraftar',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -214,7 +214,7 @@ class _IstatistiklerSayfasiState extends State<IstatistiklerSayfasi> {
     if (activeUser == null) {
       return const Card(
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Text('Henüz aktif taraftar yok'),
         ),
       );
@@ -290,7 +290,7 @@ class _IstatistiklerSayfasiState extends State<IstatistiklerSayfasi> {
           children: [
             const Text(
               'Detaylı Bilgiler',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),

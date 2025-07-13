@@ -87,7 +87,7 @@ class _NewsPageState extends State<NewsPage> with SingleTickerProviderStateMixin
                 CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Text('Haberler yükleniyor...'),
               ],
             ),

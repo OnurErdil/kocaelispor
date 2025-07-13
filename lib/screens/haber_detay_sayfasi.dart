@@ -96,7 +96,7 @@ class HaberDetaySayfasi extends StatelessWidget {
                               SizedBox(width: 4),
                               Text(
                                 'ÖNEMLİ',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 12,
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -183,7 +183,7 @@ class HaberDetaySayfasi extends StatelessWidget {
                   if (haber.etiketler.isNotEmpty) ...[
                     const Text(
                       'Etiketler',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -242,7 +242,7 @@ class HaberDetaySayfasi extends StatelessWidget {
                         SizedBox(width: 8),
                         Text(
                           'Kocaelispor 1966 - Resmi Haber',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppTheme.primaryGreen,
                             fontWeight: FontWeight.w600,
                           ),

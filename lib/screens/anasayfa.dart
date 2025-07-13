@@ -110,7 +110,7 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
               children: [
                 const Text(
                   'Merhaba Taraftar!',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,

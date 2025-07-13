@@ -103,7 +103,7 @@ class _GaleriSayfasiState extends State<GaleriSayfasi> with SingleTickerProvider
                 CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Text('Fotoğraflar yükleniyor...'),
               ],
             ),

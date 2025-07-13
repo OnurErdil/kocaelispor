@@ -1,10 +1,12 @@
+// lib/screens/main_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'anasayfa.dart';
 import 'kadro_sayfasi.dart';
 import 'profile_page.dart';
 import 'takvim_sayfasi.dart';
-import 'galeri_sayfasi.dart'; // ✅ YENİ IMPORT
+import 'galeri_sayfasi.dart';
+import 'forum_sayfasi.dart'; // ✅ FORUM SAYFASI İMPORT
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -18,14 +20,17 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   late PageController _pageController;
   late AnimationController _animationController;
 
+  // ✅ FORUM SAYFASI EKLENDİ (3. SIRADA)
   final List<Widget> _pages = [
-    const Anasayfa(),
-    const KadroSayfasi(),
-    const TakvimSayfasi(),
-    const GaleriSayfasi(), // ✅ YENİ SAYFA
-    const ProfilePage(),
+    const Anasayfa(),        // 0
+    const KadroSayfasi(),    // 1
+    const TakvimSayfasi(),   // 2
+    const ForumSayfasi(),    // 3 ← YENİ EKLENEN
+    const GaleriSayfasi(),   // 4
+    const ProfilePage(),     // 5
   ];
 
+  // ✅ NAVIGASYON İTEMLERİ (6 ADET)
   final List<_NavItem> _navItems = [
     _NavItem(
       icon: Icons.home_outlined,
@@ -43,7 +48,12 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       label: 'Takvim',
     ),
     _NavItem(
-      icon: Icons.photo_library_outlined, // ✅ YENİ İKON
+      icon: Icons.forum_outlined, // ✅ FORUM İKONU
+      activeIcon: Icons.forum,
+      label: 'Forum',
+    ),
+    _NavItem(
+      icon: Icons.photo_library_outlined,
       activeIcon: Icons.photo_library,
       label: 'Galeri',
     ),
@@ -71,6 +81,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  // ✅ TAB DEĞİŞTİRME FONKSİYONU
   void _onTabTapped(int index) {
     if (_currentIndex == index) {
       // Aynı tab'a tekrar tıklandığında hafif titreşim
@@ -110,58 +121,56 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: _onTabTapped, // ✅ BU ÇOK ÖNEMLİ!
+          type: BottomNavigationBarType.fixed, // ✅ 6 ITEM İÇİN GEREKLİ
+          backgroundColor: const Color(0xFF1A1A1A), // Koyu tema
+          selectedItemColor: const Color(0xFF00913C), // Kocaelispor yeşili
+          unselectedItemColor: Colors.grey.shade400,
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
           ),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            type: BottomNavigationBarType.fixed, // 4 item için gerekli
-            backgroundColor: const Color(0xFF1A1A1A), // Daha modern koyu ton
-            selectedItemColor: const Color(0xFF00913C), // Kocaelispor yeşili
-            unselectedItemColor: Colors.grey.shade400,
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w400,
-              fontSize: 11,
-            ),
-            onTap: _onTabTapped,
-            items: _navItems.map((item) {
-              final isSelected = _navItems.indexOf(item) == _currentIndex;
-              return BottomNavigationBarItem(
-                icon: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF00913C).withOpacity(0.1)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    isSelected ? item.activeIcon : item.icon,
-                    size: isSelected ? 26 : 24,
-                  ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 10,
+          ),
+          elevation: 8,
+          items: _navItems.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final isSelected = _currentIndex == index;
+
+            return BottomNavigationBarItem(
+              icon: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF00913C).withOpacity(0.15)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                label: item.label,
-              );
-            }).toList(),
-          ),
+                child: Icon(
+                  isSelected ? item.activeIcon : item.icon,
+                  size: 24,
+                ),
+              ),
+              label: item.label,
+            );
+          }).toList(),
         ),
       ),
     );
   }
 }
 
+// ✅ NAVİGASYON İTEM SINIFI
 class _NavItem {
   final IconData icon;
   final IconData activeIcon;
@@ -172,54 +181,4 @@ class _NavItem {
     required this.activeIcon,
     required this.label,
   });
-}
-
-// Bonus: Kocaelispor teması için ortak renk sabitleri
-class KocaelisporTheme {
-  static const Color primaryGreen = Color(0xFF00913C);
-  static const Color darkGreen = Color(0xFF006B2D);
-  static const Color lightGreen = Color(0xFF4CAF50);
-  static const Color darkBackground = Color(0xFF1A1A1A);
-  static const Color cardBackground = Color(0xFF2D2D2D);
-
-  static ThemeData get darkTheme => ThemeData(
-    brightness: Brightness.dark,
-    primarySwatch: MaterialColor(0xFF00913C, {
-      50: const Color(0xFFE8F5E8),
-      100: const Color(0xFFC8E6C9),
-      200: const Color(0xFFA5D6A7),
-      300: const Color(0xFF81C784),
-      400: const Color(0xFF66BB6A),
-      500: primaryGreen,
-      600: const Color(0xFF43A047),
-      700: darkGreen,
-      800: const Color(0xFF2E7D32),
-      900: const Color(0xFF1B5E20),
-    }),
-    scaffoldBackgroundColor: darkBackground,
-    cardColor: cardBackground,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: primaryGreen,
-      foregroundColor: Colors.white,
-      elevation: 0,
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryGreen,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: primaryGreen, width: 2),
-      ),
-    ),
-  );
 }

@@ -160,7 +160,7 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
                         CircularProgressIndicator(
                           valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         Text('Mesajlar yükleniyor...'),
                       ],
                     ),
@@ -197,15 +197,15 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
                           size: 64,
                           color: Colors.grey,
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         Text(
                           'Henüz mesaj yok',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                          style: const TextStyle(fontSize: 18, color: Colors.grey),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
                           'İlk mesajı sen yaz! ⚽',
-                          style: TextStyle(color: Colors.grey),
+                          style: const TextStyle(color: Colors.grey),
                         ),
                       ],
                     ),
@@ -291,7 +291,7 @@ class _ForumSayfasiState extends State<ForumSayfasi> {
                         ),
                         suffixIcon: _isLoading
                             ? const Padding(
-                          padding: EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(12),
                           child: SizedBox(
                             width: 20,
                             height: 20,
