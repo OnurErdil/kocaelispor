@@ -7,7 +7,11 @@ import 'profile_page.dart';
 import 'takvim_sayfasi.dart';
 import 'galeri_sayfasi.dart';
 import 'forum_sayfasi.dart'; // ✅ FORUM SAYFASI İMPORT
+import 'package:provider/provider.dart';
+import '../providers/tab_provider.dart';
 
+// diğer import'lar...
+final GlobalKey<_MainScreenState> mainScreenKey = GlobalKey<_MainScreenState>();
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -19,7 +23,19 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   int _currentIndex = 0;
   late PageController _pageController;
   late AnimationController _animationController;
+  void changeTab(int index) {
+    if (_currentIndex != index) {
+      setState(() {
+        _currentIndex = index;
+      });
 
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
   // ✅ FORUM SAYFASI EKLENDİ (3. SIRADA)
   final List<Widget> _pages = [
     const Anasayfa(),        // 0
@@ -65,6 +81,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   ];
 
   @override
+  @override
   void initState() {
     super.initState();
     _pageController = PageController();
@@ -72,7 +89,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-  }
 
   @override
   void dispose() {
@@ -80,7 +96,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     _animationController.dispose();
     super.dispose();
   }
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TabProvider>().setPageController(_pageController);
+    });
+  }
   // ✅ TAB DEĞİŞTİRME FONKSİYONU
   void _onTabTapped(int index) {
     if (_currentIndex == index) {
@@ -94,11 +113,19 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     });
 
     // Sayfa geçişi animasyonu
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    void changeTab(int index) {
+      if (_currentIndex != index) {
+        setState(() {
+          _currentIndex = index;
+        });
+
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
 
     // Hafif titreşim feedback
     HapticFeedback.selectionClick();

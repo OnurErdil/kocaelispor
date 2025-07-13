@@ -1,50 +1,36 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+
+// Provider import'ları
+import 'providers/tab_provider.dart';
+import 'provider/theme_provider.dart';
+import 'provider/language_provider.dart';
+
+// Diğer import'lar
 import 'firebase_options.dart';
+import 'services/notification_service.dart';
+import 'services/analytics_service.dart';
 import 'screens/main_screen.dart';
 import 'screens/login_page.dart';
 import 'theme/app_theme.dart';
-import 'services/notification_service.dart';
-import 'services/analytics_service.dart';
-import 'provider/theme_provider.dart';  // ✅ Doğru path
-import 'provider/language_provider.dart';  // ✅ Doğru path
-import 'l10n/app_localizations.dart';  // ✅ Manuel import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // System UI optimizations
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-
-  // System UI style
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.black,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  // Servisleri başlat
+  // Firebase başlatma
   try {
-    await Future.wait([
-      AnalyticsService.initialize(),
-      NotificationService.initialize(), // ✅ Artık çalışacak
-    ]);
-    print("✅ Tüm servisler başarıyla başlatıldı!");
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print("✅ Firebase başarıyla başlatıldı!");
+
+    // Servisleri başlat
+    await NotificationService.initialize();
+    await AnalyticsService.initialize();
+    print("✅ Servisler başarıyla başlatıldı!");
   } catch (e) {
     print("⚠️ Bazı servisler başlatılamadı: $e");
     // Uygulama yine de devam etsin
@@ -79,6 +65,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
         ChangeNotifierProvider<LanguageProvider>.value(value: languageProvider),
+        ChangeNotifierProvider(create: (_) => TabProvider()),
       ],
       child: Consumer2<ThemeProvider, LanguageProvider>(
         builder: (context, themeProvider, languageProvider, child) {
@@ -86,28 +73,15 @@ class MyApp extends StatelessWidget {
             title: 'Kocaelispor 1966',
             debugShowCheckedModeBanner: false,
 
-            // ✅ Localization ayarları
-            localizationsDelegates: const [
-              AppLocalizations.delegate,  // ✅ Bizim localizations
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [
-              Locale('tr', 'TR'),  // Türkçe
-              Locale('en', 'US'),  // İngilizce
-            ],
-            locale: languageProvider.currentLocale,  // ✅ Dinamik dil
-
-            // ✅ Tema ayarları
-            themeMode: themeProvider.flutterThemeMode,
+            // Tema ayarları
+            themeMode: themeProvider.themeMode,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
 
-            // ✅ Başlangıç ekranı
+            // Başlangıç ekranı
             home: const AuthWrapper(),
 
-            // ✅ Navigator observer (analytics için)
+            // Navigator observer (analytics için)
             navigatorObservers: [
               AnalyticsService.observer,
             ],

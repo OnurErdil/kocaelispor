@@ -1,15 +1,14 @@
-// lib/screens/anasayfa.dart - Admin Kontrollü Versiyon
+// lib/screens/anasayfa.dart - DOĞRU İMPORT SIRASI
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';                    // ✅ YENİ EKLENDİ
+import '../providers/tab_provider.dart';                   // ✅ YENİ EKLENDİ
 import '../widgets/custom_app_bar.dart';
 import '../widgets/analytics_wrapper.dart';
 import '../services/analytics_service.dart';
 import '../services/admin_service.dart';
 import '../theme/app_theme.dart';
-import 'kadro_sayfasi.dart';
-import 'takvim_sayfasi.dart';
-import 'puan_durumu_sayfasi.dart';
 import 'news_page.dart';
 import 'admin_panel_screen.dart';
 
@@ -75,124 +74,40 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
           showBackButton: false,
           showThemeToggle: true,
           // Admin için özel eylemler
-          actions: _isAdmin && !_isCheckingAdmin ? [
+          actions: _isAdmin && !_isCheckingAdmin
+              ? [
             IconButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
-              ),
-              icon: Icon(
-                Icons.admin_panel_settings,
-                color: Colors.orange.shade600,
-              ),
-              tooltip: 'Admin Paneli',
+              icon: const Icon(Icons.admin_panel_settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminPanelScreen(),
+                  ),
+                );
+              },
+              tooltip: 'Admin Panel',
             ),
-          ] : null,
+          ]
+              : null,
         ),
-        body: RefreshIndicator(
-          onRefresh: () async {
-            setState(() {});
-            await Future.delayed(const Duration(seconds: 1));
-          },
+        body: FadeTransition(
+          opacity: _fadeAnimation,
           child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Column(
-                children: [
-                  // Admin kontrol durumu bilgisi
-                  if (_isCheckingAdmin)
-                    Container(
-                      color: Colors.orange.shade50,
-                      padding: const EdgeInsets.all(8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Yetki kontrol ediliyor...',
-                            style: TextStyle(
-                              color: Colors.orange.shade700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+            child: Column(
+              children: [
+                // Hoş geldin mesajı
+                _buildWelcomeSection(),
 
-                  // Admin için özel bilgi çubuğu
-                  if (!_isCheckingAdmin && _isAdmin)
-                    Container(
-                      color: Colors.green.shade50,
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Icon(Icons.admin_panel_settings,
-                              color: Colors.green.shade700, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Yönetici Modu Aktif',
-                                  style: TextStyle(
-                                    color: Colors.green.shade700,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Text(
-                                  'İçerikleri düzenleyebilir ve yönetebilirsiniz',
-                                  style: TextStyle(
-                                    color: Colors.green.shade600,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
-                            ),
-                            child: Text(
-                              'Admin Panel',
-                              style: TextStyle(
-                                color: Colors.green.shade700,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                // Hızlı erişim butonları
+                _buildQuickAccessSection(),
 
-                  // Hoş geldin kartı
-                  _buildWelcomeCard(),
+                // Son maçlar
+                _buildMatchSection(),
 
-                  // Son maç ve yaklaşan maç
-                  _buildMatchSection(),
-
-                  // Hızlı erişim menüsü (admin için özel)
-                  _buildQuickAccessMenu(),
-
-                  // Son haberler
-                  _buildNewsSection(),
-
-                  // Admin için özel yönetim paneli
-                  if (!_isCheckingAdmin && _isAdmin) _buildAdminQuickActions(),
-                ],
-              ),
+                // Son haberler
+                _buildNewsSection(),
+              ],
             ),
           ),
         ),
@@ -200,28 +115,19 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
     );
   }
 
-  // Hoş geldin kartı
-  Widget _buildWelcomeCard() {
-    final user = FirebaseAuth.instance.currentUser;
-    final displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Taraftar';
-
+  // Hoş geldin bölümü
+  Widget _buildWelcomeSection() {
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppTheme.primaryGreen, Color(0xFF006D2C)],
+          colors: [AppTheme.primaryGreen, Colors.green],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -229,17 +135,9 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Hoş geldin,',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  displayName,
-                  style: const TextStyle(
+                const Text(
+                  'Kocaelispor 1966',
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -247,7 +145,9 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _isAdmin ? '🔧 Yönetici Paneline Erişim Var' : '⚽ Kocaelispor\'a Hoş Geldin!',
+                  _isAdmin && !_isCheckingAdmin
+                      ? '🔧 Yönetici Paneline Erişim Var'
+                      : '⚽ Kocaelispor\'a Hoş Geldin!',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 14,
@@ -266,6 +166,117 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ✅ HIZLI ERİŞİM BÖLÜMÜ - Tab değiştirme ile
+  Widget _buildQuickAccessSection() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hızlı Erişim',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickAccessCard(
+                  'Kadro',
+                  Icons.people,
+                      () {
+                    // ✅ Provider kullanarak tab değiştir
+                    context.read<TabProvider>().changeTab(1);
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildQuickAccessCard(
+                  'Takvim',
+                  Icons.calendar_today,
+                      () {
+                    context.read<TabProvider>().changeTab(2);
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildQuickAccessCard(
+                  'Forum',
+                  Icons.forum,
+                      () {
+                    context.read<TabProvider>().changeTab(3);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickAccessCard(
+                  'Galeri',
+                  Icons.photo_library,
+                      () {
+                    context.read<TabProvider>().changeTab(4);
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildQuickAccessCard(
+                  'Profil',
+                  Icons.person,
+                      () {
+                    context.read<TabProvider>().changeTab(5);
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Boş alan
+              Expanded(child: Container()),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAccessCard(String title, IconData icon, VoidCallback onTap) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 32,
+                color: AppTheme.primaryGreen,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -344,81 +355,9 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
             ),
             Icon(
               isResult ? Icons.check_circle : Icons.schedule,
-              color: isResult ? Colors.green : Colors.orange,
+              color: isResult ? Colors.green.shade600 : Colors.orange.shade600,
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  // Hızlı erişim menüsü (admin için özel seçenekler ile)
-  Widget _buildQuickAccessMenu() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Hızlı Erişim',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.2,
-            children: [
-              _buildQuickAccessCard('Kadro', Icons.people, () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const KadroSayfasi()));
-              }),
-              _buildQuickAccessCard('Takvim', Icons.calendar_today, () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const TakvimSayfasi()));
-              }),
-              _buildQuickAccessCard('Puan Durumu', Icons.table_chart, () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const PuanDurumuSayfasi()));
-              }),
-              _buildQuickAccessCard('Haberler', Icons.article, () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const NewsPage()));
-              }),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickAccessCard(String title, IconData icon, VoidCallback onTap) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 32,
-                color: AppTheme.primaryGreen,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -459,6 +398,7 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
                 .limit(3)
                 .snapshots(),
             builder: (context, snapshot) {
+              // Yükleniyor durumu
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
                   child: CircularProgressIndicator(
@@ -467,6 +407,32 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
                 );
               }
 
+              // Hata durumu
+              if (snapshot.hasError) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Haberler yüklenirken hata oluştu',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: () => setState(() {}),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Tekrar Dene'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              // Veri yoksa
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return Card(
                   child: Padding(
@@ -488,6 +454,23 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
                               fontSize: 12,
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const AdminPanelScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Haber Ekle'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryGreen,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
                         ],
                       ],
                     ),
@@ -495,6 +478,7 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
                 );
               }
 
+              // Haberler listesi
               return Column(
                 children: snapshot.data!.docs.take(3).map((doc) {
                   final data = doc.data() as Map<String, dynamic>;
@@ -508,170 +492,192 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildNewsPreviewCard(Map<String, dynamic> newsData) {
-    final tarih = newsData['tarih'] as Timestamp?;
-    final formattedDate = tarih != null
-        ? "${tarih.toDate().day}.${tarih.toDate().month}.${tarih.toDate().year}"
-        : 'Tarih yok';
+  // Haber önizleme kartı
+  Widget _buildNewsPreviewCard(Map<String, dynamic> data) {
+    final title = data['baslik'] ?? 'Başlık Yok';
+    final content = data['icerik'] ?? '';
+    final category = data['kategori'] ?? 'Genel';
+    final date = data['tarih']?.toDate() ?? DateTime.now();
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: newsData['resimUrl'] != null && newsData['resimUrl'].toString().isNotEmpty
-            ? ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            newsData['resimUrl'],
-            width: 60,
-            height: 60,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 60,
-                height: 60,
-                color: Colors.grey.shade200,
-                child: const Icon(Icons.image, color: Colors.grey),
-              );
-            },
-          ),
-        )
-            : Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: AppTheme.primaryGreen.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(
-            Icons.article,
-            color: AppTheme.primaryGreen,
-          ),
-        ),
-        title: Text(
-          newsData['baslik'] ?? 'Başlık Yok',
-          style: const TextStyle(fontWeight: FontWeight.w600),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          formattedDate,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-        ),
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const NewsPage()),
-          );
+          _showSimpleNewsDetail(title, content, category, date);
         },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Kategori badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getCategoryColor(category).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _getCategoryColor(category).withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  category.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: _getCategoryColor(category),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Başlık
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  height: 1.3,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              const SizedBox(height: 8),
+
+              // İçerik önizleme
+              Text(
+                content,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade700,
+                  height: 1.4,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              const SizedBox(height: 12),
+
+              // Tarih ve okuma işareti
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _formatSimpleDate(date),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 12,
+                    color: Colors.grey.shade400,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  // Admin için özel hızlı eylemler paneli
-  Widget _buildAdminQuickActions() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  // Basit haber detayı
+  void _showSimpleNewsDetail(String title, String content, String category, DateTime date) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.admin_panel_settings, color: Colors.orange.shade700),
-              const SizedBox(width: 8),
+              // Kategori
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getCategoryColor(category).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  category.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: _getCategoryColor(category),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // İçerik
+              Text(content),
+              const SizedBox(height: 12),
+              // Tarih
               Text(
-                'Yönetici Hızlı Eylemler',
+                _formatSimpleDate(date),
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange.shade700,
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 2.5,
-            children: [
-              _buildAdminActionCard(
-                'Haber Ekle',
-                Icons.add_circle,
-                Colors.blue,
-                    () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NewsPage()),
-                ),
-              ),
-              _buildAdminActionCard(
-                'Puan Güncelle',
-                Icons.table_chart,
-                Colors.green,
-                    () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PuanDurumuSayfasi()),
-                ),
-              ),
-              _buildAdminActionCard(
-                'Oyuncu Ekle',
-                Icons.person_add,
-                Colors.purple,
-                    () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const KadroSayfasi()),
-                ),
-              ),
-              _buildAdminActionCard(
-                'Admin Panel',
-                Icons.dashboard,
-                Colors.orange,
-                    () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
-                ),
-              ),
-            ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAdminActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  // Kategori rengi
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'transfer':
+        return Colors.blue.shade600;
+      case 'maç':
+      case 'mac':
+        return Colors.green.shade600;
+      case 'takım':
+      case 'takim':
+        return Colors.orange.shade600;
+      case 'kulüp':
+      case 'kulup':
+        return Colors.purple.shade600;
+      default:
+        return AppTheme.primaryGreen;
+    }
+  }
+
+  // Basit tarih formatı
+  String _formatSimpleDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      if (difference.inHours == 0) {
+        return '${difference.inMinutes} dk önce';
+      }
+      return '${difference.inHours} saat önce';
+    } else if (difference.inDays == 1) {
+      return 'Dün';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} gün önce';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 }
