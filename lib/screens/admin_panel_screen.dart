@@ -1,4 +1,4 @@
-// lib/screens/admin_panel_screen.dart - MAÇ YÖNETİMİ EKLİ VERSİYON
+// lib/screens/admin_panel_screen.dart - HATASIZ VERSİYON
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,7 +24,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this); // 7 sekme oldu
+    _tabController = TabController(length: 6, vsync: this); // ✅ 6 sekme
   }
 
   @override
@@ -61,9 +61,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                 Tab(icon: Icon(Icons.people), text: "Kullanıcılar"),
                 Tab(icon: Icon(Icons.article), text: "Haberler"),
                 Tab(icon: Icon(Icons.sports), text: "Oyuncular"),
-                Tab(icon: Icon(Icons.sports_soccer), text: "Maçlar"), // YENİ SEKME
+                Tab(icon: Icon(Icons.sports_soccer), text: "Maçlar"),
                 Tab(icon: Icon(Icons.photo_library), text: "Takım Fotoları"),
-                Tab(icon: Icon(Icons.history), text: "Loglar"),
               ],
             ),
           ),
@@ -77,9 +76,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                 _buildUsersTab(),
                 _buildNewsTab(),
                 _buildPlayersTab(),
-                _buildMatchesTab(), // YENİ SEKME İÇERİĞİ
+                _buildMatchesTab(), // ✅ Bu fonksiyonu ekleyeceğiz
                 _buildTeamPhotosTab(),
-                _buildLogsTab(),
               ],
             ),
           ),
@@ -88,7 +86,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     );
   }
 
-  // YENİ: Maçlar sekmesi
+  // ✅ MAÇ SEKMESİ - EKSİK FONKSİYON
   Widget _buildMatchesTab() {
     return Column(
       children: [
@@ -109,385 +107,134 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
 
         // Maçlar listesi
         Expanded(
-          child: DefaultTabController(
-            length: 3,
-            child: Column(
-              children: [
-                // Alt sekmeler
-                Container(
-                  color: Colors.grey.shade100,
-                  child: const TabBar(
-                    labelColor: Colors.green,
-                    unselectedLabelColor: Colors.grey,
-                    tabs: [
-                      Tab(text: "Yaklaşan Maçlar"),
-                      Tab(text: "Oynanmış Maçlar"),
-                      Tab(text: "Tüm Maçlar"),
-                    ],
-                  ),
-                ),
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('maclar')
+                .orderBy('tarih', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-                // Alt sekme içerikleri
-                Expanded(
-                  child: TabBarView(
+              if (snapshot.hasError) {
+                return Center(child: Text('Hata: ${snapshot.error}'));
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildUpcomingMatchesList(),
-                      _buildFinishedMatchesList(),
-                      _buildAllMatchesList(),
+                      Icon(Icons.sports_soccer, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'Henüz maç eklenmemiş',
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
                     ],
                   ),
-                ),
-              ],
-            ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: snapshot.data!.docs.length,
+                itemBuilder: (context, index) {
+                  final match = snapshot.data!.docs[index];
+                  return _buildMatchCard(match);
+                },
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  // Yaklaşan maçlar listesi
-  Widget _buildUpcomingMatchesList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('maclar')
-          .where('tarih', isGreaterThan: Timestamp.now())
-          .orderBy('tarih', descending: false)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text('Hata: ${snapshot.error}'));
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.schedule, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text(
-                  'Yaklaşan maç yok',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: snapshot.data!.docs.length,
-          itemBuilder: (context, index) {
-            final match = snapshot.data!.docs[index];
-            return _buildMatchCard(match, isUpcoming: true);
-          },
-        );
-      },
-    );
-  }
-
-  // Oynanmış maçlar listesi
-  Widget _buildFinishedMatchesList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('maclar')
-          .where('skor', isEqualTo: true)
-          .orderBy('tarih', descending: true)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text('Hata: ${snapshot.error}'));
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.sports_soccer, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text(
-                  'Oynanmış maç yok',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: snapshot.data!.docs.length,
-          itemBuilder: (context, index) {
-            final match = snapshot.data!.docs[index];
-            return _buildMatchCard(match, isFinished: true);
-          },
-        );
-      },
-    );
-  }
-
-  // Tüm maçlar listesi
-  Widget _buildAllMatchesList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('maclar')
-          .orderBy('tarih', descending: true)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text('Hata: ${snapshot.error}'));
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.sports_soccer, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text(
-                  'Henüz maç eklenmemiş',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: snapshot.data!.docs.length,
-          itemBuilder: (context, index) {
-            final match = snapshot.data!.docs[index];
-            final data = match.data() as Map<String, dynamic>;
-            final isFinished = data['isFinished'] ?? false;
-            return _buildMatchCard(match, isFinished: isFinished, isUpcoming: !isFinished);
-          },
-        );
-      },
-    );
-  }
-
-  // Maç kartı
-  Widget _buildMatchCard(DocumentSnapshot match, {bool isFinished = false, bool isUpcoming = false}) {
+  // ✅ MAÇ KARTI
+  Widget _buildMatchCard(DocumentSnapshot match) {
     final data = match.data() as Map<String, dynamic>;
-    final homeTeam = data['homeTeam'] as String? ?? 'Ev Sahibi';
-    final awayTeam = data['awayTeam'] as String? ?? 'Deplasman';
-    final homeScore = data['homeScore']?.toString() ?? '0';
-    final awayScore = data['awayScore']?.toString() ?? '0';
-    final date = data['date'] as Timestamp?;
-    final stadium = data['stadium'] as String? ?? 'Belirtilmemiş';
-    final isHome = data['isHome'] as bool? ?? false;
+    final homeTeam = data['ev_sahibi'] ?? 'Ev Sahibi';
+    final awayTeam = data['deplasman'] ?? 'Deplasman';
+    final date = data['tarih'] as Timestamp?;
+    final stadium = data['stad'] ?? 'Belirtilmemiş';
 
-    Color cardColor = Colors.white;
-    if (isFinished) {
-      cardColor = Colors.green.shade50;
-    } else if (isUpcoming) {
-      cardColor = Colors.blue.shade50;
+    // Skor kontrolü
+    final skor = data['skor'];
+    bool isFinished = skor != null;
+    String scoreText = 'VS';
+
+    if (isFinished && skor is Map) {
+      final homeScore = skor['ev_sahibi']?.toString() ?? '0';
+      final awayScore = skor['deplasman']?.toString() ?? '0';
+      scoreText = '$homeScore - $awayScore';
     }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      color: cardColor,
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Takım isimleri ve skor
+            // Takımlar ve skor
             Row(
               children: [
-                // Ev sahibi takım
                 Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        homeTeam,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                          color: isHome ? Colors.green.shade700 : Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      if (isHome)
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade700,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            'EV SAHİBİ',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                    ],
+                  child: Text(
+                    homeTeam,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-
-                // Skor veya VS
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isFinished ? Colors.green.shade700 : Colors.orange.shade600,
+                    color: isFinished ? Colors.green.shade700 : Colors.orange.shade700,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    isFinished ? '$homeScore - $awayScore' : 'VS',
+                    scoreText,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-
-                // Deplasman takım
                 Expanded(
-                  child: Column(
-                    children: [
-                      Text(
-                        awayTeam,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                          color: !isHome ? Colors.green.shade700 : Colors.black,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      if (!isHome)
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade700,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            'EV SAHİBİ',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                    ],
+                  child: Text(
+                    awayTeam,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
-            // Tarih ve stad bilgisi
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
-                    const SizedBox(width: 4),
-                    Text(
-                      date != null ? _formatDate(date.toDate()) : 'Tarih yok',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.stadium, size: 16, color: Colors.grey.shade600),
-                    const SizedBox(width: 4),
-                    Text(
-                      stadium,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            // Tarih ve stad
+            Text(
+              '${_formatDate(date?.toDate())} - $stadium',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
             ),
 
             const SizedBox(height: 12),
 
-            // İşlem butonları
+            // Butonlar
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // Düzenle butonu
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _editMatch(match.id, data),
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Düzenle'),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.blue.shade600),
-                      foregroundColor: Colors.blue.shade600,
-                    ),
-                  ),
+                OutlinedButton.icon(
+                  onPressed: () => _updateScore(match.id, data),
+                  icon: const Icon(Icons.score, size: 16),
+                  label: const Text('Skor'),
                 ),
-                const SizedBox(width: 8),
-
-                // Skor güncelle butonu (sadece yaklaşan maçlar için)
-                if (isUpcoming)
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _updateScore(match.id, data),
-                      icon: const Icon(Icons.score, size: 16),
-                      label: const Text('Skor'),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.green.shade600),
-                        foregroundColor: Colors.green.shade600,
-                      ),
-                    ),
-                  ),
-
-                // Sonuç ekleme butonu (sadece yaklaşan maçlar için)
-                if (isUpcoming)
-                  const SizedBox(width: 8),
-
-                // Sil butonu
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _deleteMatch(match.id),
-                    icon: const Icon(Icons.delete, size: 16, color: Colors.red),
-                    label: const Text(
-                      'Sil',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
-                    ),
-                  ),
+                OutlinedButton.icon(
+                  onPressed: () => _deleteMatch(match.id),
+                  icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                  label: const Text('Sil', style: TextStyle(color: Colors.red)),
                 ),
               ],
             ),
@@ -497,7 +244,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     );
   }
 
-  // Maç ekleme fonksiyonu
+  // ✅ MAÇ EKLEME FONKSİYONU
   Future<void> _addMatch() async {
     final result = await _showAddMatchDialog();
     if (result == null) return;
@@ -507,21 +254,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
         'ev_sahibi': result['homeTeam'],
         'deplasman': result['awayTeam'],
         'tarih': result['date'],
-        'stad': result['stadium'],            // ✅ stadium → stad
-        'skor': null,                         // ✅ Skor başlangıçta null
-        'isHome': result['isHome'],
-        'isFinished': false,
-        'homeScore': null,
-        'awayScore': null,
+        'stad': result['stadium'],
+        'skor': null,
         'olusturma_tarihi': FieldValue.serverTimestamp(),
-        'olusturan': FirebaseAuth.instance.currentUser?.email ?? 'Bilinmeyen',
+        'olusturan': FirebaseAuth.instance.currentUser?.email ?? 'Admin',
       });
-
-      await AdminService.logAdminActivity(
-        action: 'MATCH_ADDED',
-        targetType: 'MATCH',
-        targetId: result['homeTeam'] + ' vs ' + result['awayTeam'],
-      );
 
       _showSuccessSnackBar('Maç başarıyla eklendi');
 
@@ -530,7 +267,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     }
   }
 
-  // Maç ekleme dialog'u
+  // ✅ MAÇ EKLEME DIALOG'U
   Future<Map<String, dynamic>?> _showAddMatchDialog() async {
     final TextEditingController homeTeamController = TextEditingController();
     final TextEditingController awayTeamController = TextEditingController();
@@ -538,7 +275,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
 
     DateTime selectedDate = DateTime.now().add(const Duration(days: 7));
     TimeOfDay selectedTime = const TimeOfDay(hour: 15, minute: 0);
-    bool isHome = true;
 
     return await showDialog<Map<String, dynamic>>(
       context: context,
@@ -574,15 +310,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                     hintText: 'İsmet Paşa Stadı',
                     border: OutlineInputBorder(),
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                // Kocaelispor ev sahibi mi?
-                SwitchListTile(
-                  title: const Text('Kocaelispor ev sahibi mi?'),
-                  value: isHome,
-                  onChanged: (value) => setState(() => isHome = value),
-                  activeColor: Colors.green.shade700,
                 ),
                 const SizedBox(height: 16),
 
@@ -643,7 +370,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                     'awayTeam': awayTeam,
                     'stadium': stadium.isNotEmpty ? stadium : 'İsmet Paşa Stadı',
                     'date': Timestamp.fromDate(matchDateTime),
-                    'isHome': isHome,
                   });
                 }
               },
@@ -655,13 +381,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     );
   }
 
-  // Maç düzenleme
-  Future<void> _editMatch(String matchId, Map<String, dynamic> data) async {
-    // Benzer dialog ile maç bilgilerini düzenleme
-    _showSuccessSnackBar('Maç düzenleme özelliği yakında eklenecek');
-  }
-
-  // Skor güncelleme
+  // ✅ SKOR GÜNCELLEME
   Future<void> _updateScore(String matchId, Map<String, dynamic> data) async {
     final result = await _showScoreDialog();
     if (result == null) return;
@@ -671,18 +391,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
           .collection('maclar')
           .doc(matchId)
           .update({
-        'skor': {                             // ✅ Map formatında
+        'skor': {
           'ev_sahibi': result['homeScore'],
           'deplasman': result['awayScore'],
         },
         'bitis_tarihi': FieldValue.serverTimestamp(),
       });
-
-      await AdminService.logAdminActivity(
-        action: 'MATCH_SCORE_UPDATED',
-        targetType: 'MATCH',
-        targetId: matchId,
-      );
 
       _showSuccessSnackBar('Maç skoru güncellendi');
 
@@ -691,7 +405,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     }
   }
 
-  // Skor dialog'u
+  // ✅ SKOR DIALOG'U
   Future<Map<String, int>?> _showScoreDialog() async {
     final TextEditingController homeScoreController = TextEditingController();
     final TextEditingController awayScoreController = TextEditingController();
@@ -751,10 +465,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     );
   }
 
-  // Maç silme
+  // ✅ MAÇ SİLME
   Future<void> _deleteMatch(String matchId) async {
     final confirmed = await _showConfirmDialog(
-      'Bu maçı silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz.',
+      'Bu maçı silmek istediğinizden emin misiniz?',
     );
 
     if (confirmed) {
@@ -764,12 +478,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
             .doc(matchId)
             .delete();
 
-        await AdminService.logAdminActivity(
-          action: 'MATCH_DELETED',
-          targetType: 'MATCH',
-          targetId: matchId,
-        );
-
         _showSuccessSnackBar('Maç başarıyla silindi');
 
       } catch (e) {
@@ -778,241 +486,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     }
   }
 
-  // Tarih formatlama
-  String _formatDate(DateTime date) {
+  // ✅ TARİH FORMATLAMA
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Tarih yok';
     return '${date.day.toString().padLeft(2, '0')}.'
         '${date.month.toString().padLeft(2, '0')}.'
         '${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
-  // DİĞER MEVCUT METODLAR (değişmeden kalacak - takım fotoları vs.)
-
-  Widget _buildTeamPhotosTab() {
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.orange.shade50,
-            border: Border.all(color: Colors.orange.shade200),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.info_outline,
-                color: Colors.orange.shade700,
-                size: 32,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                kIsWeb ? 'Web Platformu Tespit Edildi' : 'Mobil Platform',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange.shade700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Fotoğraf yükleme özelliği mobil platformlarda çalışır.\n'
-                    'Şimdilik manuel olarak URL ile fotoğraf ekleyebilirsiniz.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14),
-              ),
-            ],
-          ),
-        ),
-
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          child: ElevatedButton.icon(
-            onPressed: _addTeamPhotoWithUrl,
-            icon: const Icon(Icons.link),
-            label: const Text('URL ile Fotoğraf Ekle'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade700,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('team_photos')
-                .orderBy('created_at', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text('Hata: ${snapshot.error}'),
-                    ],
-                  ),
-                );
-              }
-
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.photo_library, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'Henüz takım fotoğrafı yok',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Yukarıdaki butona tıklayarak fotoğraf ekleyebilirsiniz',
-                        style: TextStyle(color: Colors.grey),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              final photos = snapshot.data!.docs;
-
-              return GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.5,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemCount: photos.length,
-                itemBuilder: (context, index) {
-                  final photo = photos[index];
-                  final data = photo.data() as Map<String, dynamic>;
-                  final imageUrl = data['image_url'] as String? ?? '';
-                  final title = data['title'] as String? ?? 'Başlık yok';
-
-                  return Card(
-                    elevation: 4,
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                            child: imageUrl.isNotEmpty
-                                ? Image.network(imageUrl, fit: BoxFit.cover, width: double.infinity)
-                                : Container(color: Colors.grey.shade300, child: const Icon(Icons.image)),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  // URL ile fotoğraf ekleme
-  Future<void> _addTeamPhotoWithUrl() async {
-    final result = await _showAddPhotoUrlDialog();
-    if (result == null) return;
-
-    final title = result['title']!;
-    final imageUrl = result['url']!;
-
-    try {
-      await FirebaseFirestore.instance.collection('team_photos').add({
-        'title': title.trim(),
-        'image_url': imageUrl.trim(),
-        'created_at': FieldValue.serverTimestamp(),
-        'created_by': FirebaseAuth.instance.currentUser?.email ?? 'Bilinmeyen',
-      });
-
-      await AdminService.logAdminActivity(
-        action: 'TEAM_PHOTO_ADDED',
-        targetType: 'PHOTO',
-        targetId: title,
-      );
-
-      _showSuccessSnackBar('Takım fotoğrafı başarıyla eklendi');
-
-    } catch (e) {
-      _showErrorSnackBar('Fotoğraf eklenirken hata oluştu: $e');
-    }
-  }
-
-  // URL ile fotoğraf ekleme dialog'u
-  Future<Map<String, String>?> _showAddPhotoUrlDialog() async {
-    final TextEditingController titleController = TextEditingController();
-    final TextEditingController urlController = TextEditingController();
-
-    return await showDialog<Map<String, String>>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('URL ile Fotoğraf Ekle'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Fotoğraf Başlığı',
-                hintText: 'Örn: Takım Antrenmanı',
-                border: OutlineInputBorder(),
-              ),
-              maxLength: 50,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: urlController,
-              decoration: const InputDecoration(
-                labelText: 'Fotoğraf URL\'si',
-                hintText: 'https://example.com/image.jpg',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final title = titleController.text.trim();
-              final url = urlController.text.trim();
-              if (title.isNotEmpty && url.isNotEmpty) {
-                Navigator.pop(context, {'title': title, 'url': url});
-              }
-            },
-            child: const Text('Ekle'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // DİĞER MEVCUT METODLAR
+  // DİĞER MEVCUT METODLAR (değişmez)
 
   Widget _buildStatsTab() {
     return SingleChildScrollView(
@@ -1164,58 +646,142 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     );
   }
 
-  Widget _buildLogsTab() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('admin_logs')
-          .orderBy('timestamp', descending: true)
-          .limit(100)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  Widget _buildTeamPhotosTab() {
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.all(16),
+          child: ElevatedButton.icon(
+            onPressed: _addTeamPhotoWithUrl,
+            icon: const Icon(Icons.link),
+            label: const Text('URL ile Fotoğraf Ekle'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade700,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('team_photos')
+                .orderBy('created_at', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: snapshot.data!.docs.length,
-          itemBuilder: (context, index) {
-            final doc = snapshot.data!.docs[index];
-            final data = doc.data() as Map<String, dynamic>;
-            final timestamp = data['timestamp'] as Timestamp?;
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(
+                  child: Text('Henüz fotoğraf yok', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                );
+              }
 
-            return Card(
-              child: ListTile(
-                leading: Icon(_getActionIcon(data['action'])),
-                title: Text(data['action'] ?? 'Bilinmeyen işlem'),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Admin: ${data['adminEmail'] ?? 'Bilinmeyen'}'),
-                    Text('Tarih: ${timestamp?.toDate().toString() ?? 'Tarih yok'}'),
-                  ],
+              return GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.5,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
                 ),
-              ),
-            );
-          },
-        );
-      },
+                itemCount: snapshot.data!.docs.length,
+                itemBuilder: (context, index) {
+                  final photo = snapshot.data!.docs[index];
+                  final data = photo.data() as Map<String, dynamic>;
+                  final imageUrl = data['image_url'] as String? ?? '';
+                  final title = data['title'] as String? ?? 'Başlık yok';
+
+                  return Card(
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: imageUrl.isNotEmpty
+                              ? Image.network(imageUrl, fit: BoxFit.cover, width: double.infinity)
+                              : Container(color: Colors.grey.shade300, child: const Icon(Icons.image)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  IconData _getActionIcon(String? action) {
-    switch (action) {
-      case 'MATCH_ADDED':
-        return Icons.add_circle;
-      case 'MATCH_SCORE_UPDATED':
-        return Icons.score;
-      case 'MATCH_DELETED':
-        return Icons.delete;
-      case 'TEAM_PHOTO_ADDED':
-        return Icons.add_a_photo;
-      default:
-        return Icons.history;
+  Future<void> _addTeamPhotoWithUrl() async {
+    final result = await _showAddPhotoUrlDialog();
+    if (result == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('team_photos').add({
+        'title': result['title']!.trim(),
+        'image_url': result['url']!.trim(),
+        'created_at': FieldValue.serverTimestamp(),
+        'created_by': FirebaseAuth.instance.currentUser?.email ?? 'Admin',
+      });
+
+      _showSuccessSnackBar('Fotoğraf başarıyla eklendi');
+
+    } catch (e) {
+      _showErrorSnackBar('Fotoğraf eklenirken hata oluştu: $e');
     }
+  }
+
+  Future<Map<String, String>?> _showAddPhotoUrlDialog() async {
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController urlController = TextEditingController();
+
+    return await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('URL ile Fotoğraf Ekle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: 'Fotoğraf Başlığı',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(
+                labelText: 'Fotoğraf URL\'si',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final title = titleController.text.trim();
+              final url = urlController.text.trim();
+              if (title.isNotEmpty && url.isNotEmpty) {
+                Navigator.pop(context, {'title': title, 'url': url});
+              }
+            },
+            child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<bool> _showConfirmDialog(String message) async {

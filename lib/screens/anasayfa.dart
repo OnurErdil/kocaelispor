@@ -626,11 +626,11 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
                 return _buildMatchCard(
                   homeTeam: data['ev_sahibi'] ?? 'Ev Sahibi',
                   awayTeam: data['deplasman'] ?? 'Deplasman',
-                  homeScore: '',
-                  awayScore: '',
+                  homeScore: _getScoreFromSkor(data['skor'], 'ev_sahibi'),
+                  awayScore: _getScoreFromSkor(data['skor'], 'deplasman'),
                   date: _formatMatchDate(data['tarih']),
                   isFinished: false,
-                  isHome: data['isHome'] ?? false,
+                  isHome: (data['ev_sahibi'] ?? '').toLowerCase().contains('kocaelispor'),
                   stadium: data['stadium'] ?? '',
                 );
               }
@@ -1053,4 +1053,10 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
       return '';
     }
   }
-}
+  String _getScoreFromSkor(dynamic skor, String team) {
+    if (skor == null) return '0';
+    if (skor is Map) {
+      return (skor[team] ?? '0').toString();
+    }
+    return '0';
+  }}
