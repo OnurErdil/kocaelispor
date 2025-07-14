@@ -2,8 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../services/notification_service.dart';
+// lib/screens/admin_notification_panel.dart - OVERFLOW DÜZELTİLDİ
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/custom_app_bar.dart';
 import '../theme/app_theme.dart';
+import '../services/notification_service.dart';
+import '../services/admin_service.dart';
 
 class AdminNotificationPanel extends StatefulWidget {
   const AdminNotificationPanel({super.key});
@@ -13,180 +18,330 @@ class AdminNotificationPanel extends StatefulWidget {
 }
 
 class _AdminNotificationPanelState extends State<AdminNotificationPanel> {
-  final _titleController = TextEditingController();
-  final _bodyController = TextEditingController();
-  String _selectedType = 'genel';
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _bodyController = TextEditingController();
+
+  String _selectedType = 'Genel Duyuru';
   bool _isLoading = false;
 
-  // Bildirim türleri
-  final Map<String, String> _notificationTypes = {
-    'genel': '📢 Genel Duyuru',
-    'mac': '⚽ Maç Bildirimi',
-    'transfer': '🔄 Transfer Haberi',
-    'gol': '⚽ Gol Bildirimi',
-    'haber': '📰 Yeni Haber',
-  };
+  final List<String> _notificationTypes = [
+    'Genel Duyuru',
+    'Maç Bildirimi',
+    'Transfer Haberi',
+    'Kulüp Duyurusu',
+    'Acil Bilgilendirme',
+  ];
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bildirim Gönder'),
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
+      appBar: const CustomAppBar(
+        title: "Push Bildirim Paneli",
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Bildirim türü seçimi
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Bildirim Türü',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+      body: SafeArea( // ✅ SafeArea eklendi
+        child: SingleChildScrollView( // ✅ Kaydırılabilir yapıldı
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Bildirim türü seçimi
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Bildirim Türü',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: _selectedType,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.category),
-                      ),
-                      items: _notificationTypes.entries.map((entry) {
-                        return DropdownMenuItem(
-                          value: entry.key,
-                          child: Text(entry.value),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedType = value!;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Başlık
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: TextField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Bildirim Başlığı',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.title),
-                    hintText: 'Örn: Yeni Transfer!',
-                  ),
-                  maxLength: 50,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // İçerik
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: TextField(
-                  controller: _bodyController,
-                  decoration: const InputDecoration(
-                    labelText: 'Bildirim İçeriği',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.message),
-                    hintText: 'Örn: Yeni transferimiz açıklandı!',
-                  ),
-                  maxLines: 3,
-                  maxLength: 150,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Test bildirimi butonu
-            ElevatedButton.icon(
-              onPressed: _isLoading ? null : _sendTestNotification,
-              icon: const Icon(Icons.bug_report),
-              label: const Text('Test Bildirimi Gönder'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.all(16),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Herkese gönder butonu
-            ElevatedButton.icon(
-              onPressed: _isLoading ? null : _sendToAllUsers,
-              icon: _isLoading
-                  ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-                  : const Icon(Icons.send),
-              label: Text(_isLoading ? 'Gönderiliyor...' : 'Herkese Gönder'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.all(16),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Bilgi kartı
-            Card(
-              color: Colors.blue.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.info, color: Colors.blue.shade600),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Bilgilendirme',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade600,
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedType,
+                            isExpanded: true,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            items: _notificationTypes.map((String type) {
+                              return DropdownMenuItem<String>(
+                                value: type,
+                                child: Row(
+                                  children: [
+                                    Icon(_getTypeIcon(type), size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(type),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setState(() {
+                                  _selectedType = newValue;
+                                });
+                              }
+                            },
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '• Test bildirimi sadece bu cihaza gelir\n'
-                          '• "Herkese Gönder" tüm kullanıcılara bildirim gönderir\n'
-                          '• Bildirimler 5-10 saniye içinde ulaşır',
-                      style: TextStyle(color: Colors.blue.shade700),
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+
+              // Başlık
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Bildirim Başlığı',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _titleController,
+                        decoration: const InputDecoration(
+                          hintText: 'Örn: Yeni Transfer!',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.title),
+                          counterText: '', // ✅ Counter text gizlendi
+                        ),
+                        maxLength: 50,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // İçerik
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Bildirim İçeriği',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _bodyController,
+                        decoration: const InputDecoration(
+                          hintText: 'Örn: Yeni transferimiz açıklandı!',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.message),
+                          counterText: '', // ✅ Counter text gizlendi
+                        ),
+                        maxLines: 3,
+                        maxLength: 150,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Önizleme kartı
+              Card(
+                elevation: 2,
+                color: Colors.grey.shade50,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.preview, color: Colors.grey.shade600),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Bildirim Önizlemesi',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryGreen,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Icon(
+                                    Icons.sports_soccer,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Kocaelispor',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  'şimdi',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _titleController.text.isEmpty
+                                  ? 'Bildirim başlığı buraya gelecek'
+                                  : _titleController.text,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _bodyController.text.isEmpty
+                                  ? 'Bildirim içeriği buraya gelecek'
+                                  : _bodyController.text,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Test bildirimi butonu
+              SizedBox(
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _sendTestNotification,
+                  icon: const Icon(Icons.bug_report),
+                  label: const Text('Test Bildirimi Gönder'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Herkese gönder butonu
+              SizedBox(
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _sendToAllUsers,
+                  icon: _isLoading
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                      : const Icon(Icons.send),
+                  label: Text(_isLoading ? 'Gönderiliyor...' : 'Tüm Kullanıcılara Gönder'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24), // ✅ Alt boşluk eklendi
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  IconData _getTypeIcon(String type) {
+    switch (type) {
+      case 'Maç Bildirimi':
+        return Icons.sports_soccer;
+      case 'Transfer Haberi':
+        return Icons.person_add;
+      case 'Kulüp Duyurusu':
+        return Icons.campaign;
+      case 'Acil Bilgilendirme':
+        return Icons.warning;
+      default:
+        return Icons.notifications;
+    }
   }
 
   // Test bildirimi gönder
@@ -199,7 +354,7 @@ class _AdminNotificationPanelState extends State<AdminNotificationPanel> {
     try {
       setState(() => _isLoading = true);
 
-      // Local notification göster
+      // Test bildirimi gönder (sadece bu cihaza)
       await NotificationService.showLocalNotification(
         title: _titleController.text.trim(),
         body: _bodyController.text.trim().isEmpty
@@ -231,16 +386,29 @@ class _AdminNotificationPanelState extends State<AdminNotificationPanel> {
     try {
       setState(() => _isLoading = true);
 
-      // ⚠️ ÖNEMLI: Bu kısım Firebase Console üzerinden yapılmalı
-      // Çünkü server key gerekli. Bu kod sadece örnek amaçlı.
-
-      await _sendNotificationViaFirebase(
-        title: _titleController.text.trim(),
-        body: _bodyController.text.trim().isEmpty
+      // Firebase bildirim koleksiyonuna ekle
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'title': _titleController.text.trim(),
+        'body': _bodyController.text.trim().isEmpty
             ? 'Yeni bildirim'
             : _bodyController.text.trim(),
-        type: _selectedType,
+        'type': _selectedType,
+        'timestamp': FieldValue.serverTimestamp(),
+        'sentBy': 'admin',
+      });
+
+      // Admin aktivitesi logla
+      await AdminService.logAdminActivity(
+        action: 'NOTIFICATION_SENT',
+        targetType: 'ALL_USERS',
+        details: {
+          'title': _titleController.text.trim(),
+          'type': _selectedType,
+        },
       );
+
+      _showMessage('Bildirim başarıyla gönderildi!');
+      _clearForm();
 
     } catch (e) {
       _showMessage('Bildirim gönderilemedi: $e', isError: true);
@@ -249,87 +417,14 @@ class _AdminNotificationPanelState extends State<AdminNotificationPanel> {
     }
   }
 
-  // Firebase üzerinden bildirim gönder (örnek)
-  Future<void> _sendNotificationViaFirebase({
-    required String title,
-    required String body,
-    required String type,
-  }) async {
-    // ⚠️ UYARI: Bu kod çalışmaz çünkü server key gerekli
-    // Gerçek uygulamada backend sunucunuzdan göndermelisiniz
-
-    const String serverKey = 'YOUR_SERVER_KEY_HERE'; // Firebase Console'dan alın
-    const String fcmUrl = 'https://fcm.googleapis.com/fcm/send';
-
-    final Map<String, dynamic> notification = {
-      'to': '/topics/all_users', // Tüm kullanıcılar için topic
-      'notification': {
-        'title': title,
-        'body': body,
-        'icon': '@mipmap/ic_launcher',
-        'sound': 'default',
-      },
-      'data': {
-        'type': type,
-        'timestamp': DateTime.now().toIso8601String(),
-      },
-    };
-
-    try {
-      final response = await http.post(
-        Uri.parse(fcmUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'key=$serverKey',
-        },
-        body: jsonEncode(notification),
-      );
-
-      if (response.statusCode == 200) {
-        _showMessage('Bildirim başarıyla gönderildi!');
-        _clearFields();
-      } else {
-        throw Exception('HTTP ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      print('Bildirim gönderme hatası: $e');
-
-      // Alternatif: Firebase Console kullanma talimatı göster
-      _showFirebaseConsoleInfo();
-    }
-  }
-
-  // Firebase Console bilgisi göster
-  void _showFirebaseConsoleInfo() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Firebase Console Kullanın'),
-        content: const Text(
-            'Şu an için Firebase Console üzerinden bildirim gönderin:\n\n'
-                '1. Firebase Console > Messaging\n'
-                '2. "Send your first message"\n'
-                '3. Başlık ve içeriği girin\n'
-                '4. "kocaelispor_1966_mobil" uygulamasını seçin\n'
-                '5. "Send message"'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tamam'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Onay dialogu
   Future<bool> _showConfirmDialog() async {
     return await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Bildirim Gönder'),
-        content: const Text('Bu bildirim tüm kullanıcılara gönderilecek. Emin misiniz?'),
+        content: Text(
+          'Tüm kullanıcılara "${_titleController.text.trim()}" bildirimi gönderilecek. Emin misiniz?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -339,36 +434,29 @@ class _AdminNotificationPanelState extends State<AdminNotificationPanel> {
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryGreen,
-              foregroundColor: Colors.white,
             ),
-            child: const Text('Gönder'),
+            child: const Text('Gönder', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     ) ?? false;
   }
 
-  // Mesaj göster
+  void _clearForm() {
+    _titleController.clear();
+    _bodyController.clear();
+    setState(() {
+      _selectedType = 'Genel Duyuru';
+    });
+  }
+
   void _showMessage(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
       ),
     );
-  }
-
-  // Form alanlarını temizle
-  void _clearFields() {
-    _titleController.clear();
-    _bodyController.clear();
-    setState(() => _selectedType = 'genel');
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _bodyController.dispose();
-    super.dispose();
   }
 }

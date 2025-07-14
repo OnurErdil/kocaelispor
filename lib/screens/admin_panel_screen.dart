@@ -1,4 +1,4 @@
-// lib/screens/admin_panel_screen.dart
+// lib/screens/admin_panel_screen.dart - DÜZELTİLMİŞ VERSİYON
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/custom_app_bar.dart';
@@ -6,9 +6,8 @@ import '../theme/app_theme.dart';
 import '../services/admin_service.dart';
 import 'admin_notification_panel.dart';
 
-
 class AdminPanelScreen extends StatefulWidget {
-  const AdminPanelScreen({super.key}); // ✅ CONST EKLENDİ
+  const AdminPanelScreen({super.key});
 
   @override
   State<AdminPanelScreen> createState() => _AdminPanelScreenState();
@@ -52,20 +51,26 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       )
           : RefreshIndicator(
         onRefresh: _loadStats,
-        child: ListView(
+        child: SingleChildScrollView( // ✅ Overflow sorunu çözümü
           padding: const EdgeInsets.all(16),
-          children: [
-            // İstatistik kartları
-            _buildStatsSection(),
-            const SizedBox(height: 16),
+          child: Column(
+            children: [
+              // İstatistik kartları
+              _buildStatsSection(),
+              const SizedBox(height: 16),
 
-            // Hızlı eylemler
-            _buildQuickActionsCard(),
-            const SizedBox(height: 16),
+              // Hızlı eylemler - GELİŞTİRİLDİ
+              _buildQuickActionsCard(),
+              const SizedBox(height: 16),
 
-            // Son aktiviteler
-            _buildRecentActivitiesCard(),
-          ],
+              // Admin kontrolleri - YENİ
+              _buildAdminControlsCard(),
+              const SizedBox(height: 16),
+
+              // Son aktiviteler
+              _buildRecentActivitiesCard(),
+            ],
+          ),
         ),
       ),
     );
@@ -112,56 +117,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       ],
     );
   }
-  Widget _buildNotificationCard() {
-    return Card(
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AdminNotificationPanel(),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.purple.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.notifications_active,
-                  size: 32,
-                  color: Colors.purple.shade600,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Push Bildirimler',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Kullanıcılara bildirim gönder',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
+  // Hızlı eylemler - GELİŞTİRİLDİ
   Widget _buildQuickActionsCard() {
     return Card(
       elevation: 4,
@@ -175,19 +132,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           children: [
             const Text(
               'Hızlı Eylemler',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
+            // İlk satır
             Row(
               children: [
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.notifications_active,
                     label: 'Push Bildirim',
-                    onPressed: _openNotificationPanel,  // ✅ YENİ METOD
+                    onPressed: _openNotificationPanel,
                     color: Colors.orange,
                   ),
                 ),
@@ -195,9 +153,32 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.person_add,
-                    label: 'Oyuncu Ekle',
-                    onPressed: _showAddPlayerDialog,
+                    label: 'Admin Yap',
+                    onPressed: _showMakeAdminDialog,
                     color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // İkinci satır
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.article_outlined,
+                    label: 'Haber Ekle',
+                    onPressed: _showAddNewsDialog,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.sports_soccer,
+                    label: 'Maç Ekle',
+                    onPressed: _showAddMatchDialog,
+                    color: Colors.purple,
                   ),
                 ),
               ],
@@ -207,11 +188,74 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       ),
     );
   }
-  void _openNotificationPanel() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const AdminNotificationPanel(),
+
+  // Admin kontrolleri - YENİ KART
+  Widget _buildAdminControlsCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Sistem Kontrolleri',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // İlk satır
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.sports,
+                    label: 'Oyuncu Ekle',
+                    onPressed: _showAddPlayerDialog,
+                    color: Colors.indigo,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.leaderboard,
+                    label: 'Puan Durumu',
+                    onPressed: _showStandingsDialog,
+                    color: Colors.teal,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // İkinci satır
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.backup,
+                    label: 'Yedek Al',
+                    onPressed: _showBackupDialog,
+                    color: Colors.brown,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.analytics,
+                    label: 'İstatistikler',
+                    onPressed: _showAnalyticsDialog,
+                    color: Colors.cyan,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -229,7 +273,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           children: [
             const Text(
               'Son Aktiviteler',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -242,46 +286,24 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   .limit(5)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Text('Hata: Aktiviteler yüklenemedi');
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
                 }
 
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
-                    ),
-                  );
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      children: [
-                        Icon(Icons.history, size: 48, color: Colors.grey),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Henüz aktivite yok',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  );
+                if (snapshot.data!.docs.isEmpty) {
+                  return const Text('Henüz aktivite yok');
                 }
 
                 return Column(
                   children: snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     final timestamp = data['timestamp'] as Timestamp?;
-                    final dateStr = timestamp?.toDate().toString().split(' ')[0] ?? 'Tarih yok';
+                    final dateStr = timestamp != null
+                        ? '${timestamp.toDate().day}/${timestamp.toDate().month} ${timestamp.toDate().hour}:${timestamp.toDate().minute.toString().padLeft(2, '0')}'
+                        : 'Bilinmeyen';
 
                     return ListTile(
-                      dense: true,
-                      leading: Icon(
-                        _getActionIcon(data['action']),
-                        size: 20,
-                        color: AppTheme.primaryGreen,
-                      ),
+                      leading: Icon(_getActionIcon(data['action'])),
                       title: Text(
                         data['action'] ?? 'Bilinmeyen işlem',
                         style: const TextStyle(
@@ -319,6 +341,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       default:
         return Icons.history;
     }
+  }
+
+  // Dialog fonksiyonları
+  void _openNotificationPanel() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AdminNotificationPanel(),
+      ),
+    );
   }
 
   void _showMakeAdminDialog() {
@@ -372,19 +404,58 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
-  void _showAddNewsDialog() => _showComingSoonDialog('Haber Ekleme');
-  void _showAddPlayerDialog() => _showComingSoonDialog('Oyuncu Ekleme');
-  void _showAddMatchDialog() => _showComingSoonDialog('Maç Ekleme');
+  void _showAddNewsDialog() => _showFeatureDialog('Haber Ekleme', 'Haber ekleme özelliği aktif! Haberler sayfasından haber ekleyebilirsiniz.');
+  void _showAddPlayerDialog() => _showFeatureDialog('Oyuncu Ekleme', 'Oyuncu ekleme özelliği aktif! Kadro sayfasından oyuncu ekleyebilirsiniz.');
+  void _showAddMatchDialog() => _showFeatureDialog('Maç Ekleme', 'Maç ekleme özelliği aktif! Takvim sayfasından maç ekleyebilirsiniz.');
+  void _showStandingsDialog() => _showFeatureDialog('Puan Durumu', 'Puan durumu yönetimi aktif! Puan durumu sayfasından düzenleyebilirsiniz.');
+  void _showBackupDialog() => _showComingSoonDialog('Yedekleme');
+  void _showAnalyticsDialog() => _showComingSoonDialog('Analitik Rapor');
+
+  void _showFeatureDialog(String feature, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            const SizedBox(width: 8),
+            Text(feature),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showComingSoonDialog(String feature) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(feature),
+        title: Row(
+          children: [
+            Icon(Icons.hourglass_empty, color: Colors.orange),
+            const SizedBox(width: 8),
+            Text(feature),
+          ],
+        ),
         content: Text('$feature özelliği yakında eklenecek!'),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Tamam'),
           ),
         ],
@@ -397,57 +468,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
-  Widget _ActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    required Color color,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color.withOpacity(0.1),
-        foregroundColor: color,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(color: color.withOpacity(0.3)),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 }
 
-// ✅ CONST CONSTRUCTOR İLE AYRILAN WİDGET'LAR
-
+// İstatistik kartı widget'ı
 class _StatCard extends StatelessWidget {
   final String title;
   final int value;
@@ -466,7 +501,7 @@ class _StatCard extends StatelessWidget {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -475,7 +510,7 @@ class _StatCard extends StatelessWidget {
             Icon(
               icon,
               color: color,
-              size: 28,
+              size: 24,
             ),
             const SizedBox(height: 8),
             Text(
@@ -489,7 +524,7 @@ class _StatCard extends StatelessWidget {
               title,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: Colors.grey.shade600,
               ),
             ),
           ],
@@ -499,6 +534,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// Aksiyon butonu widget'ı
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -514,30 +550,31 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color.withOpacity(0.1),
-        foregroundColor: color,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
+    return Container(
+      height: 80,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color.withOpacity(0.1),
+          foregroundColor: color,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: color.withOpacity(0.3)),
           ),
-        ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 10),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

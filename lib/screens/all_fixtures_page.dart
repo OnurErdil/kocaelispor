@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
+import '../services/admin_service.dart'; // ✅ AdminService import eklendi
 
 class AllFixturesPage extends StatefulWidget {
   const AllFixturesPage({super.key});
@@ -47,52 +48,23 @@ class _AllFixturesPageState extends State<AllFixturesPage> with TickerProviderSt
     super.dispose();
   }
 
-  // Admin durumu kontrolü - GÜÇLENDIRILDI
+  // Admin durumu kontrolü - KADRO SAYFASI İLE AYNI YÖNTEMİ KULLAN
   Future<void> _checkAdminStatus() async {
     setState(() {
       _isCheckingAdmin = true;
     });
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      print("🔍 All Fixtures - User: ${user?.email}"); // Debug
+      // Kadro sayfasındaki ile aynı yöntemi kullan
+      final adminStatus = await AdminService.isCurrentUserAdmin();
+      print("🔍 All Fixtures - AdminService sonucu: $adminStatus"); // Debug
 
-      if (user != null) {
-        // Birden fazla deneme yap
-        for (int i = 0; i < 3; i++) {
-          final adminDoc = await FirebaseFirestore.instance
-              .collection('admins')
-              .doc(user.uid)
-              .get();
+      setState(() {
+        _isAdmin = adminStatus;
+        _isCheckingAdmin = false;
+      });
 
-          print("🔍 All Fixtures - Admin doc exists (attempt ${i+1}): ${adminDoc.exists}"); // Debug
-
-          if (adminDoc.exists) {
-            setState(() {
-              _isAdmin = true;
-              _isCheckingAdmin = false;
-            });
-            print("✅ All Fixtures - Admin confirmed!"); // Debug
-            return;
-          }
-
-          // Kısa bekleme
-          await Future.delayed(const Duration(milliseconds: 500));
-        }
-
-        // 3 deneme sonrası admin değil
-        setState(() {
-          _isAdmin = false;
-          _isCheckingAdmin = false;
-        });
-        print("❌ All Fixtures - Not admin after 3 attempts"); // Debug
-      } else {
-        print("🔍 All Fixtures - No user logged in"); // Debug
-        setState(() {
-          _isAdmin = false;
-          _isCheckingAdmin = false;
-        });
-      }
+      print("✅ All Fixtures - Final admin status: $_isAdmin"); // Debug
     } catch (e) {
       print("❌ All Fixtures - Admin check error: $e"); // Debug
       setState(() {
@@ -568,20 +540,55 @@ class _AllFixturesPageState extends State<AllFixturesPage> with TickerProviderSt
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // Skor Gir butonu (sadece henüz bitmemiş ve geçmemiş maçlarda)
-                if (!isFinished && !isPast)
+                // Skor Gir/Düzenle butonu - ERTELENEN MAÇ DESTEĞİ EKLENDİ
+                if (!isFinished)
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () => _showScoreDialog(doc.id, homeTeam, awayTeam),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryGreen,
+                        backgroundColor: isPast
+                            ? Colors.orange // Tarihi geçmiş -> turuncu (ertelenen)
+                            : AppTheme.primaryGreen, // Normal -> yeşil
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
-                      child: const Text('Skor Gir', style: TextStyle(fontSize: 12)),
+                      child: Text(
+                          isPast ? 'Ertelenen Maça Skor' : 'Skor Gir',
+                          style: const TextStyle(fontSize: 10)
+                      ),
                     ),
                   ),
-                if (!isFinished && !isPast) const SizedBox(width: 8),
+                if (isFinished)
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _showScoreDialog(doc.id, homeTeam, awayTeam,
+                          currentHomeScore: homeScore?.toString(),
+                          currentAwayScore: awayScore?.toString()
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      child: const Text('Skor Düzenle', style: TextStyle(fontSize: 10)),
+                    ),
+                  ),
+                if (!isFinished || isFinished) const SizedBox(width: 8),
+
+                // Skor İptal butonu (sadece bitmiş maçlarda)
+                if (isFinished)
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _showCancelScoreDialog(doc.id, homeTeam, awayTeam),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      child: const Text('Skor İptal', style: TextStyle(fontSize: 10)),
+                    ),
+                  ),
+                if (isFinished) const SizedBox(width: 8),
 
                 // Düzenle butonu (her zaman)
                 Expanded(
@@ -746,18 +753,22 @@ class _AllFixturesPageState extends State<AllFixturesPage> with TickerProviderSt
     );
   }
 
-  // Skor girme dialog'u
-  void _showScoreDialog(String docId, String homeTeam, String awayTeam) {
-    final homeController = TextEditingController();
-    final awayController = TextEditingController();
+  // Skor girme dialog'u - GELİŞTİRİLDİ
+  void _showScoreDialog(String docId, String homeTeam, String awayTeam, {
+    String? currentHomeScore,
+    String? currentAwayScore,
+  }) {
+    final homeController = TextEditingController(text: currentHomeScore ?? '');
+    final awayController = TextEditingController(text: currentAwayScore ?? '');
+    final isEditing = currentHomeScore != null && currentAwayScore != null;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF2D2D2D),
-        title: const Text(
-          'Maç Sonucu',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          isEditing ? 'Skoru Düzenle' : 'Maç Sonucu',
+          style: const TextStyle(color: Colors.white),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -770,6 +781,16 @@ class _AllFixturesPageState extends State<AllFixturesPage> with TickerProviderSt
                 fontWeight: FontWeight.bold,
               ),
             ),
+            if (isEditing) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Mevcut Skor: $currentHomeScore - $currentAwayScore',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             Row(
               children: [
@@ -838,8 +859,8 @@ class _AllFixturesPageState extends State<AllFixturesPage> with TickerProviderSt
 
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Maç sonucu kaydedildi!'),
+                    SnackBar(
+                      content: Text(isEditing ? 'Skor güncellendi!' : 'Maç sonucu kaydedildi!'),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -856,7 +877,65 @@ class _AllFixturesPageState extends State<AllFixturesPage> with TickerProviderSt
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryGreen,
             ),
-            child: const Text('Kaydet', style: TextStyle(color: Colors.white)),
+            child: Text(
+                isEditing ? 'Güncelle' : 'Kaydet',
+                style: const TextStyle(color: Colors.white)
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Skor iptal etme dialog'u - YENİ FONKSİYON
+  void _showCancelScoreDialog(String docId, String homeTeam, String awayTeam) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2D2D2D),
+        title: const Text(
+          'Skoru İptal Et',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          '$homeTeam - $awayTeam maçının skorunu iptal etmek istediğinizden emin misiniz?\n\nMaç tekrar "yaklaşan maçlar" listesine dönecek.',
+          style: const TextStyle(color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Vazgeç', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await FirebaseFirestore.instance
+                    .collection('maclar')
+                    .doc(docId)
+                    .update({
+                  'skor': null, // Skoru tamamen sil
+                });
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Skor iptal edildi! Maç tekrar yaklaşan maçlar listesinde.'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Hata: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('İptal Et', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
