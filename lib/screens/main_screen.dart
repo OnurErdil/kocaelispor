@@ -1,4 +1,4 @@
-// lib/screens/main_screen.dart - DÜZELTILMIŞ VERSİYON
+// lib/screens/main_screen.dart - GÜNCELLENMİŞ VERSİYON
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'anasayfa.dart';
@@ -26,12 +26,12 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
   // ✅ SAYFALAR LİSTESİ (6 ADET)
   final List<Widget> _pages = [
-    const Anasayfa(),        // 0
-    const KadroSayfasi(),    // 1
-    const TakvimSayfasi(),   // 2
-    const ForumSayfasi(),    // 3
-    const GaleriSayfasi(),   // 4
-    const ProfilePage(),     // 5
+    const Anasayfa(),        // 0 - Ana Sayfa
+    const KadroSayfasi(),    // 1 - Kadro
+    const TakvimSayfasi(),   // 2 - Fikstür
+    const ForumSayfasi(),    // 3 - Forum
+    const GaleriSayfasi(),   // 4 - Galeri
+    const ProfilePage(),     // 5 - Profil
   ];
 
   // ✅ NAVIGASYON İTEMLERİ (6 ADET)
@@ -71,15 +71,33 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    _pageController = PageController(initialPage: 0);
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
+    // Provider'ı dinle
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TabProvider>().setPageController(_pageController);
+      final tabProvider = Provider.of<TabProvider>(context, listen: false);
+      tabProvider.addListener(_onTabChanged);
     });
+  }
+
+  void _onTabChanged() {
+    final tabProvider = Provider.of<TabProvider>(context, listen: false);
+    final newIndex = tabProvider.currentIndex;
+
+    if (newIndex != _currentIndex && newIndex < _pages.length) {
+      setState(() {
+        _currentIndex = newIndex;
+      });
+      _pageController.animateToPage(
+        newIndex,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   @override
@@ -89,116 +107,110 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  // ✅ DÜZELTILMIŞ TAB DEĞİŞTİRME FONKSİYONU
-  void _onTabTapped(int index) {
-    print("🔄 Tab değiştiriliyor: $_currentIndex -> $index");
-
-    if (_currentIndex == index) {
-      // Aynı tab'a tekrar tıklandığında hafif titreşim
-      HapticFeedback.lightImpact();
-      return;
-    }
-
-    // ✅ ÖNEMLİ: setState ve sayfa değiştirme işlemini birlikte yap
-    setState(() {
-      _currentIndex = index;
-    });
-
-    // ✅ SAYFA GEÇİŞİ ANİMASYONU
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-
-    // Hafif titreşim feedback
-    HapticFeedback.selectionClick();
-
-    print("✅ Tab değiştirildi: $index");
+  void _onItemTapped(int index) {
+    if (index == _currentIndex) return;
+    HapticFeedback.lightImpact();
+    final tabProvider = Provider.of<TabProvider>(context, listen: false);
+    tabProvider.changeTab(index);  // ✅ BU DOĞRU
   }
 
-  // ✅ ALTERNATIF TAB DEĞİŞTİRME FONKSİYONU (provider ile)
-  void changeTab(int index) {
-    if (_currentIndex != index) {
+  void _onPageChanged(int index) {
+    if (index != _currentIndex) {
       setState(() {
         _currentIndex = index;
       });
-
-      _pageController.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      final tabProvider = Provider.of<TabProvider>(context, listen: false);
+      tabProvider.setCurrentIndex(index);  // ✅ BU DOĞRU
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        children: _pages,
-        onPageChanged: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: _onTabTapped, // ✅ DÜZELTILMIŞ FONKSİYON
-          type: BottomNavigationBarType.fixed, // ✅ 6 ITEM İÇİN GEREKLİ
-          backgroundColor: const Color(0xFF1A1A1A), // Koyu tema
-          selectedItemColor: const Color(0xFF00913C), // Kocaelispor yeşili
-          unselectedItemColor: Colors.grey.shade400,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
+    return Consumer<TabProvider>(
+      builder: (context, tabProvider, child) {
+        return Scaffold(
+          body: PageView(
+            controller: _pageController,
+            onPageChanged: _onPageChanged,
+            children: _pages,
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 10,
-          ),
-          elevation: 8,
-          items: _navItems.asMap().entries.map((entry) {
-            final index = entry.key;
-            final item = entry.value;
-            final isSelected = _currentIndex == index;
+          bottomNavigationBar: _buildBottomNavBar(),
+        );
+      },
+    );
+  }
 
-            return BottomNavigationBarItem(
-              icon: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF00913C).withOpacity(0.15)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+  Widget _buildBottomNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        border: Border(
+          top: BorderSide(
+            color: Colors.green.shade700,
+            width: 1,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        child: Container(
+          height: 65,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_navItems.length, (index) {
+              final item = _navItems[index];
+              final isSelected = _currentIndex == index;
+
+              return GestureDetector(
+                onTap: () => _onItemTapped(index),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.green.shade700.withOpacity(0.2)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    border: isSelected
+                        ? Border.all(color: Colors.green.shade700, width: 1)
+                        : null,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isSelected ? item.activeIcon : item.icon,
+                        color: isSelected
+                            ? Colors.green.shade400
+                            : Colors.grey.shade500,
+                        size: 22,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.green.shade400
+                              : Colors.grey.shade500,
+                          fontSize: 10,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Icon(
-                  isSelected ? item.activeIcon : item.icon,
-                  size: 24,
-                ),
-              ),
-              label: item.label,
-            );
-          }).toList(),
+              );
+            }),
+          ),
         ),
       ),
     );
   }
 }
 
-// ✅ NAVİGASYON İTEM SINIFI
+// Navigasyon öğesi sınıfı
 class _NavItem {
   final IconData icon;
   final IconData activeIcon;

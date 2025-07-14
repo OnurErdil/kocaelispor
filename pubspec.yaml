@@ -25,6 +25,8 @@ dependencies:
   flutter_localizations: # ✅ YENİ EKLEME - Çoklu dil desteği
     sdk: flutter
   intl: 0.20.2  # ✅ YENİ EKLEME - Dil formatları için
+  image_picker: ^1.1.2
+  firebase_storage: ^11.7.7
 
 dev_dependencies:
   flutter_test:

@@ -10,6 +10,12 @@ plugins {
 }
 
 android {
+    compileSdkVersion 34  // En az 33 olmalı
+
+    defaultConfig {
+        minSdkVersion 21  // En az 21 olmalı
+        targetSdkVersion 34
+    }
     namespace = "com.example.kocaelispor_1966_mobil"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
