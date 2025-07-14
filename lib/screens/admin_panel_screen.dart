@@ -149,9 +149,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
   Widget _buildUpcomingMatchesList() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('matches')
-          .where('date', isGreaterThan: Timestamp.now())
-          .orderBy('date', descending: false)
+          .collection('maclar')
+          .where('tarih', isGreaterThan: Timestamp.now())
+          .orderBy('tarih', descending: false)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -194,9 +194,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
   Widget _buildFinishedMatchesList() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('matches')
-          .where('isFinished', isEqualTo: true)
-          .orderBy('date', descending: true)
+          .collection('maclar')
+          .where('skor', isEqualTo: true)
+          .orderBy('tarih', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -239,8 +239,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
   Widget _buildAllMatchesList() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('matches')
-          .orderBy('date', descending: true)
+          .collection('maclar')
+          .orderBy('tarih', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -503,17 +503,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     if (result == null) return;
 
     try {
-      await FirebaseFirestore.instance.collection('matches').add({
-        'homeTeam': result['homeTeam'],
-        'awayTeam': result['awayTeam'],
-        'date': result['date'],
-        'stadium': result['stadium'],
+      await FirebaseFirestore.instance.collection('maclar').add({
+        'ev_sahibi': result['homeTeam'],
+        'deplasman': result['awayTeam'],
+        'tarih': result['date'],
+        'stad': result['stadium'],            // ✅ stadium → stad
+        'skor': null,                         // ✅ Skor başlangıçta null
         'isHome': result['isHome'],
         'isFinished': false,
         'homeScore': null,
         'awayScore': null,
-        'created_at': FieldValue.serverTimestamp(),
-        'created_by': FirebaseAuth.instance.currentUser?.email ?? 'Bilinmeyen',
+        'olusturma_tarihi': FieldValue.serverTimestamp(),
+        'olusturan': FirebaseAuth.instance.currentUser?.email ?? 'Bilinmeyen',
       });
 
       await AdminService.logAdminActivity(
@@ -667,13 +668,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
 
     try {
       await FirebaseFirestore.instance
-          .collection('matches')
+          .collection('maclar')
           .doc(matchId)
           .update({
-        'homeScore': result['homeScore'],
-        'awayScore': result['awayScore'],
-        'isFinished': true,
-        'finished_at': FieldValue.serverTimestamp(),
+        'skor': {                             // ✅ Map formatında
+          'ev_sahibi': result['homeScore'],
+          'deplasman': result['awayScore'],
+        },
+        'bitis_tarihi': FieldValue.serverTimestamp(),
       });
 
       await AdminService.logAdminActivity(
@@ -758,7 +760,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
     if (confirmed) {
       try {
         await FirebaseFirestore.instance
-            .collection('matches')
+            .collection('maclar')
             .doc(matchId)
             .delete();
 
