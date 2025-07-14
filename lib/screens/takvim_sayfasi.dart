@@ -1,4 +1,4 @@
-// lib/screens/takvim_sayfasi.dart - Forum Uyumlu Koyu Tema - TAM VERSİYON
+// lib/screens/takvim_sayfasi.dart - YENİ YAPIYLA TAM VERSİYON
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -22,6 +22,9 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
   bool _isCheckingAdmin = true;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+
+  // Yeni değişkenler
+  bool _showAllFixtures = false; // Tüm fikstürü göster/gizle
 
   @override
   void initState() {
@@ -64,7 +67,7 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0F), // Forum ile aynı koyu arka plan
       appBar: const CustomAppBar(
-        title: "Fikstür & Takvim",
+        title: "Sonuçlar & Fikstür", // YENİ BAŞLIK
       ),
       floatingActionButton: _isAdmin ? _buildFAB() : null,
       body: Container(
@@ -95,17 +98,27 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Yaklaşan Maçlar
-                      _buildSectionTitle('YAKLASAN MACLAR:', Icons.upcoming),
+                      // Son Maç
+                      _buildSectionTitle('SON MAÇ:', Icons.sports_soccer),
                       const SizedBox(height: 16),
-                      _buildUpcomingMatches(),
+                      _buildLastMatch(),
 
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
 
-                      // Son Sonuçlar - Ay bazında gruplandırılmış
-                      _buildSectionTitle('SON SONUCLAR:', Icons.history),
+                      // Sıradaki Maç
+                      _buildSectionTitle('SIRADAKİ MAÇ:', Icons.schedule),
                       const SizedBox(height: 16),
-                      _buildRecentResults(),
+                      _buildNextMatch(),
+
+                      const SizedBox(height: 24),
+
+                      // Fikstür Butonu
+                      _buildFixtureButton(),
+
+                      const SizedBox(height: 16),
+
+                      // Tüm Fikstür (butona basınca görünür)
+                      if (_showAllFixtures) _buildAllFixtures(),
 
                       const SizedBox(height: 32),
 
@@ -122,314 +135,73 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
     );
   }
 
+  // Loading bar
   Widget _buildLoadingBar() {
     return Container(
-      color: Colors.orange.shade50,
       padding: const EdgeInsets.all(8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Yetki kontrol ediliyor...',
-            style: TextStyle(
-              color: Colors.orange.shade700,
-              fontSize: 12,
-            ),
-          ),
-        ],
+      color: Colors.grey.shade800,
+      child: const Center(
+        child: Text(
+          'Yetki kontrolü yapılıyor...',
+          style: TextStyle(color: Colors.white),
+        ),
       ),
     );
   }
 
+  // Admin bar
   Widget _buildAdminBar() {
     return Container(
-      color: Colors.green.shade50,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
+      color: AppTheme.primaryGreen.withOpacity(0.2),
       child: Row(
         children: [
-          Icon(Icons.admin_panel_settings,
-              color: Colors.green.shade700, size: 20),
+          Icon(Icons.admin_panel_settings, color: AppTheme.primaryGreen),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Yönetici modundasınız - Maçları yönetebilirsiniz',
-              style: TextStyle(
-                color: Colors.green.shade700,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+          const Text(
+            'Admin modunda - Maç ekleyebilir ve düzenleyebilirsiniz',
+            style: TextStyle(color: Colors.white),
           ),
         ],
       ),
     );
   }
 
+  // Section title
   Widget _buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryGreen.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: AppTheme.primaryGreen, size: 20),
+        Icon(
+          icon,
+          color: AppTheme.primaryGreen,
+          size: 24,
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Text(
           title,
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white, // Beyaz başlık
-            letterSpacing: 1.0,
+            color: Colors.white,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildUpcomingMatches() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('maclar')
-          .where('tarih', isGreaterThan: Timestamp.now())
-          .orderBy('tarih')
-          .limit(5)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return _buildErrorCard('Yaklaşan maçlar yüklenemedi');
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildLoadingCard();
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildEmptyCard('Yaklaşan maç bulunmuyor');
-        }
-
-        return Column(
-          children: snapshot.data!.docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return _buildUpcomingMatchCard(data, doc.id);
-          }).toList(),
-        );
-      },
-    );
-  }
-
-  Widget _buildUpcomingMatchCard(Map<String, dynamic> data, String docId) {
-    final timestamp = data['tarih'] as Timestamp?;
-    if (timestamp == null) return const SizedBox.shrink();
-
-    final matchDate = timestamp.toDate();
-    final homeTeam = data['evSahibi'] ?? 'Kocaelispor';
-    final awayTeam = data['deplasman'] ?? 'Rakip';
-    final competition = data['lig'] ?? 'Lig';
-    final venue = data['stadyum'] ?? 'Stadyum';
-    final matchTime = data['saat'] ?? '21:00';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          // Sol tarih kutusu - Forum teması ile uyumlu
-          Container(
-            width: 80,
-            height: 120,
-            decoration: BoxDecoration(
-              color: const Color(0xFF2D2D2D), // Forum kartları ile aynı koyu gri
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
-              ),
-              border: Border.all(
-                color: AppTheme.primaryGreen.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${matchDate.day}',
-                  style: const TextStyle(
-                    color: Colors.white, // Beyaz tarih
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  _getMonthName(matchDate.month).toUpperCase(),
-                  style: TextStyle(
-                    color: Colors.grey.shade400, // Açık gri ay
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Icon(
-                  Icons.sports_soccer,
-                  color: AppTheme.primaryGreen, // Yeşil ikon
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-
-          // Sağ içerik alanı
-          Expanded(
-            child: Container(
-              height: 120,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A), // Forum surface rengi
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-                border: Border.all(
-                  color: Colors.grey.shade800,
-                  width: 0.5,
-                ),
-              ),
-              child: Row(
-                children: [
-                  // Maç bilgileri
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Lig bilgisi
-                        Text(
-                          competition,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade400, // Açık gri detaylar
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-
-                        // Saat ve stadyum
-                        Text(
-                          '$matchTime - $venue',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-
-                        // Takımlar
-                        Row(
-                          children: [
-                            // Ev sahibi
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  _buildTeamLogo(data['evSahibiLogo'], 24),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      homeTeam,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white, // Beyaz takım isimleri
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // VS
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(
-                                'VS',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                            ),
-
-                            // Deplasman
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      awayTeam,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white, // Beyaz takım isimleri
-                                      ),
-                                      textAlign: TextAlign.right,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _buildTeamLogo(data['deplasmanLogo'], 24),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Geri sayım - Optimized StatefulWidget ile
-                  _CountdownWidget(matchDate: matchDate, isKocaelisporTheme: true),
-
-                  // Admin düzenleme
-                  if (_isAdmin)
-                    IconButton(
-                      onPressed: () => _showMatchOptions(docId, data),
-                      icon: Icon(
-                        Icons.more_vert,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentResults() {
+  // Son maç gösterimi
+  Widget _buildLastMatch() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('maclar')
           .where('tarih', isLessThan: Timestamp.now())
-          .where('skor', isNotEqualTo: null)
+          .where('skor', isNotEqualTo: null)  // Skoru girilmiş maçlar
           .orderBy('tarih', descending: true)
-          .limit(10)
+          .limit(1)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return _buildErrorCard('Son sonuçlar yüklenemedi');
+          return _buildErrorCard('Son maç yüklenemedi');
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -440,265 +212,345 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
           return _buildEmptyCard('Henüz oynanmış maç bulunmuyor');
         }
 
-        // Maçları aya göre grupla
-        final groupedMatches = _groupMatchesByMonth(snapshot.data!.docs);
-
-        return Column(
-          children: groupedMatches.entries.map((entry) {
-            return _buildMonthSection(entry.key, entry.value);
-          }).toList(),
-        );
+        final doc = snapshot.data!.docs.first;
+        return _buildMatchCard(doc, isLastMatch: true);
       },
     );
   }
 
-  Map<String, List<QueryDocumentSnapshot>> _groupMatchesByMonth(List<QueryDocumentSnapshot> docs) {
-    final Map<String, List<QueryDocumentSnapshot>> grouped = {};
+  // Sıradaki maç gösterimi
+  Widget _buildNextMatch() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('maclar')
+          .where('tarih', isGreaterThan: Timestamp.now())
+          .orderBy('tarih', descending: false)
+          .limit(1)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _buildErrorCard('Sıradaki maç yüklenemedi');
+        }
 
-    for (final doc in docs) {
-      final data = doc.data() as Map<String, dynamic>;
-      final timestamp = data['tarih'] as Timestamp?;
-      if (timestamp == null) continue;
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildLoadingCard();
+        }
 
-      final date = timestamp.toDate();
-      final monthKey = '${_getMonthName(date.month).toUpperCase()} ${date.year}';
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _buildEmptyCard('Yaklaşan maç bulunmuyor');
+        }
 
-      if (!grouped.containsKey(monthKey)) {
-        grouped[monthKey] = [];
-      }
-      grouped[monthKey]!.add(doc);
-    }
-
-    return grouped;
+        final doc = snapshot.data!.docs.first;
+        return _buildMatchCard(doc, isNextMatch: true);
+      },
+    );
   }
 
-  Widget _buildMonthSection(String monthYear, List<QueryDocumentSnapshot> matches) {
+  // Fikstür butonu
+  Widget _buildFixtureButton() {
+    return Center(
+      child: ElevatedButton.icon(
+        onPressed: () {
+          setState(() {
+            _showAllFixtures = !_showAllFixtures;
+          });
+        },
+        icon: Icon(
+          _showAllFixtures ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+          color: Colors.white,
+        ),
+        label: Text(
+          _showAllFixtures ? 'FİKSTÜRÜ GİZLE' : 'FİKSTÜRÜ GÖSTER',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryGreen,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Tüm fikstür gösterimi
+  Widget _buildAllFixtures() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Ay başlığı - Forum teması
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          margin: const EdgeInsets.only(bottom: 16, top: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF2D2D2D), // Forum kart rengi
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppTheme.primaryGreen.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.calendar_month,
-                color: AppTheme.primaryGreen,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                monthYear,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white, // Beyaz ay başlığı
-                ),
-              ),
-            ],
-          ),
+        _buildSectionTitle('TÜM FİKSTÜR:', Icons.list),
+        const SizedBox(height: 16),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('maclar')
+              .orderBy('tarih', descending: false)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return _buildErrorCard('Fikstür yüklenemedi');
+            }
+
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return _buildLoadingCard();
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return _buildEmptyCard('Henüz maç bulunmuyor');
+            }
+
+            return Column(
+              children: snapshot.data!.docs.map((doc) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildMatchCard(doc, showAllDetails: true),
+                );
+              }).toList(),
+            );
+          },
         ),
-
-        // Maç sonuçları
-        ...matches.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return _buildResultCard(data, doc.id);
-        }).toList(),
-
-        const SizedBox(height: 24),
       ],
     );
   }
 
-  Widget _buildResultCard(Map<String, dynamic> data, String docId) {
+  // Geliştirilmiş maç kartı
+  Widget _buildMatchCard(DocumentSnapshot doc, {
+    bool isLastMatch = false,
+    bool isNextMatch = false,
+    bool showAllDetails = false,
+  }) {
+    final data = doc.data() as Map<String, dynamic>;
     final timestamp = data['tarih'] as Timestamp?;
-    if (timestamp == null) return const SizedBox.shrink();
+    final homeTeam = data['ev_sahibi'] as String? ?? 'Kocaelispor';
+    final awayTeam = data['deplasman'] as String? ?? 'Rakip';
+    final homeScore = data['skor']?['ev_sahibi'];
+    final awayScore = data['skor']?['deplasman'];
+    final homeLogoUrl = data['ev_sahibi_logo'] as String?;
+    final awayLogoUrl = data['deplasman_logo'] as String?;
 
-    final matchDate = timestamp.toDate();
-    final homeTeam = data['evSahibi'] ?? 'Kocaelispor';
-    final awayTeam = data['deplasman'] ?? 'Rakip';
-    final score = data['skor'] ?? '0-0';
-    final competition = data['lig'] ?? 'Lig';
-    final matchTime = data['saat'] ?? '21:00';
+    final matchDate = timestamp?.toDate() ?? DateTime.now();
+    final isFinished = homeScore != null && awayScore != null;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D2D2D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isLastMatch
+              ? Colors.green.withOpacity(0.5)
+              : isNextMatch
+              ? Colors.orange.withOpacity(0.5)
+              : AppTheme.primaryGreen.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
         children: [
-          // Sol tarih kutusu - Forum teması
-          Container(
-            width: 60,
-            height: 80,
-            decoration: BoxDecoration(
-              color: const Color(0xFF2D2D2D), // Forum kart rengi
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
+          // Takım bilgileri
+          Row(
+            children: [
+              // Ev sahibi takım
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildTeamLogo(homeLogoUrl, 40),
+                    const SizedBox(height: 8),
+                    Text(
+                      homeTeam,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-              border: Border.all(
-                color: AppTheme.primaryGreen.withOpacity(0.3),
-                width: 1,
+
+              // Skor veya tarih
+              Expanded(
+                child: Column(
+                  children: [
+                    if (isFinished) ...[
+                      // Skor gösterimi
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '$homeScore - $awayScore',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      // Tarih gösterimi
+                      Column(
+                        children: [
+                          Text(
+                            '${matchDate.day} ${_getMonthName(matchDate.month)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${matchDate.hour.toString().padLeft(2, '0')}:${matchDate.minute.toString().padLeft(2, '0')}',
+                            style: TextStyle(
+                              color: Colors.grey.shade400,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
+
+              // Deplasman takım
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildTeamLogo(awayLogoUrl, 40),
+                    const SizedBox(height: 8),
+                    Text(
+                      awayTeam,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // Admin butonları
+          if (_isAdmin && !isFinished) ...[
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _showScoreDialog(doc.id, homeTeam, awayTeam),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Skor Gir'),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          ],
+
+          // Admin düzenleme butonu (tüm maçlar için)
+          if (_isAdmin && showAllDetails) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Icon(
-                  Icons.sports_soccer,
-                  color: AppTheme.primaryGreen, // Yeşil ikon
-                  size: 16,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${matchDate.day}',
-                  style: const TextStyle(
-                    color: Colors.white, // Beyaz tarih
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                if (!isFinished)
+                  ElevatedButton(
+                    onPressed: () => _showScoreDialog(doc.id, homeTeam, awayTeam),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryGreen,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Skor Gir'),
                   ),
-                ),
-                Text(
-                  _getMonthName(matchDate.month).substring(0, 3).toUpperCase(),
-                  style: TextStyle(
-                    color: Colors.grey.shade400, // Açık gri ay
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
+                ElevatedButton(
+                  onPressed: () => _showMatchOptions(doc.id, data),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey,
+                    foregroundColor: Colors.white,
                   ),
+                  child: const Text('Düzenle'),
                 ),
               ],
             ),
-          ),
+          ],
 
-          // Sağ içerik alanı
-          Expanded(
-            child: Container(
-              height: 80,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A), // Forum surface rengi
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
-                ),
-                border: Border.all(
-                  color: Colors.grey.shade800,
-                  width: 0.5,
-                ),
-              ),
-              child: Row(
-                children: [
-                  // Maç bilgileri
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Lig ve saat
-                        Row(
-                          children: [
-                            Text(
-                              competition,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey.shade400, // Açık gri detaylar
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              matchTime,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey.shade500,
-                              ),
-                            ),
-                          ],
-                        ),
+          // Geri sayım (sadece sıradaki maç için)
+          if (isNextMatch && !isFinished) ...[
+            const SizedBox(height: 12),
+            _CountdownWidget(matchDate: matchDate, isKocaelisporTheme: true),
+          ],
+        ],
+      ),
+    );
+  }
 
-                        // Takımlar ve skor
-                        Row(
-                          children: [
-                            // Ev sahibi
-                            _buildTeamLogo(data['evSahibiLogo'], 20),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                homeTeam,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white, // Beyaz takım isimleri
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
+  // Error card
+  Widget _buildErrorCard(String message) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error, color: Colors.red),
+          const SizedBox(width: 8),
+          Text(message, style: const TextStyle(color: Colors.white)),
+        ],
+      ),
+    );
+  }
 
-                            // Skor
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryGreen,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                score,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
+  // Loading card
+  Widget _buildLoadingCard() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D2D2D),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+        ),
+      ),
+    );
+  }
 
-                            // Deplasman
-                            Expanded(
-                              child: Text(
-                                awayTeam,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white, // Beyaz takım isimleri
-                                ),
-                                textAlign: TextAlign.right,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildTeamLogo(data['deplasmanLogo'], 20),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Admin düzenleme
-                  if (_isAdmin)
-                    IconButton(
-                      onPressed: () => _showMatchOptions(docId, data),
-                      icon: Icon(
-                        Icons.more_vert,
-                        color: Colors.grey.shade600,
-                        size: 16,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+  // Empty card
+  Widget _buildEmptyCard(String message) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D2D2D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.primaryGreen.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info, color: Colors.grey.shade400),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: TextStyle(color: Colors.grey.shade400),
           ),
         ],
       ),
     );
   }
 
+  // Team logo
   Widget _buildTeamLogo(String? logoUrl, double size) {
     if (logoUrl == null || logoUrl.isEmpty) {
       return Container(
@@ -741,6 +593,7 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
     );
   }
 
+  // Month name
   String _getMonthName(int month) {
     const months = [
       '', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
@@ -749,6 +602,7 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
     return months[month];
   }
 
+  // Quick actions
   Widget _buildQuickActions() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -767,19 +621,19 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const PuanDurumuSayfasi()),
+                  MaterialPageRoute(
+                    builder: (context) => const PuanDurumuSayfasi(),
+                  ),
                 );
               },
-              icon: const Icon(Icons.table_chart),
-              label: const Text('Puan Durumu'),
+              icon: const Icon(Icons.leaderboard, color: Colors.white),
+              label: const Text(
+                'Puan Durumu',
+                style: TextStyle(color: Colors.white),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryGreen,
-                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
               ),
             ),
           ),
@@ -788,243 +642,244 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
     );
   }
 
-  Widget _buildLoadingCard() {
-    return Container(
-      height: 120,
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D), // Forum kart rengi
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.shade800,
-          width: 0.5,
-        ),
-      ),
-      child: const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
-        ),
-      ),
+  // FAB
+  Widget _buildFAB() {
+    return FloatingActionButton(
+      onPressed: _showAddMatchDialog,
+      backgroundColor: AppTheme.primaryGreen,
+      child: const Icon(Icons.add, color: Colors.white),
     );
   }
 
-  Widget _buildErrorCard(String message) {
-    return Container(
-      height: 120,
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D), // Forum kart rengi
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.red.shade800),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error, color: Colors.red.shade400),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: TextStyle(color: Colors.red.shade400),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Skor girme dialog'u
+  void _showScoreDialog(String docId, String homeTeam, String awayTeam) {
+    final homeController = TextEditingController();
+    final awayController = TextEditingController();
 
-  Widget _buildEmptyCard(String message) {
-    return Container(
-      height: 120,
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D), // Forum kart rengi
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.shade800,
-          width: 0.5,
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.event_busy, color: Colors.grey.shade500),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: TextStyle(color: Colors.grey.shade400),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showMatchOptions(String docId, Map<String, dynamic> data) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
-          color: Color(0xFF2D2D2D), // Forum kart rengi
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade600,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            const Text(
-              'Maç İşlemleri',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            ListTile(
-              leading: Icon(Icons.edit, color: Colors.blue.shade400),
-              title: const Text('Maçı Düzenle', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Düzenleme dialogu
-              },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.delete, color: Colors.red.shade400),
-              title: const Text('Maçı Sil', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                _confirmDeleteMatch(docId, data);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _confirmDeleteMatch(String docId, Map<String, dynamic> data) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF2D2D2D),
-        title: const Text('Maçı Sil', style: TextStyle(color: Colors.white)),
-        content: const Text('Bu maçı silmek istediğinizden emin misiniz?',
-            style: TextStyle(color: Colors.grey)),
+        title: const Text(
+          'Maç Sonucu',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        homeTeam,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: homeController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          hintText: '0',
+                          hintStyle: TextStyle(color: Colors.grey),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Text(
+                  '-',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        awayTeam,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: awayController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          hintText: '0',
+                          hintStyle: TextStyle(color: Colors.grey),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
+            child: const Text('İptal', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
+              final homeScore = int.tryParse(homeController.text);
+              final awayScore = int.tryParse(awayController.text);
+
+              if (homeScore == null || awayScore == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Geçerli skor giriniz!'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
               try {
-                await FirebaseFirestore.instance.collection('maclar').doc(docId).delete();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Maç başarıyla silindi'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+                await FirebaseFirestore.instance
+                    .collection('maclar')
+                    .doc(docId)
+                    .update({
+                  'skor': {
+                    'ev_sahibi': homeScore,
+                    'deplasman': awayScore,
+                  },
+                });
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Skor başarıyla kaydedildi!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Maç silinemedi: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Hata: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600),
-            child: const Text('Sil', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Kaydet'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFAB() {
-    return FloatingActionButton(
-      backgroundColor: AppTheme.primaryGreen,
-      child: const Icon(Icons.add, color: Colors.white),
-      tooltip: 'Maç Ekle (Admin)',
-      onPressed: () => _showAddMatchDialog(),
+  // Match options
+  void _showMatchOptions(String docId, Map<String, dynamic> data) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2D2D2D),
+        title: const Text(
+          'Maç İşlemleri',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.green),
+              title: const Text('Düzenle', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditMatchDialog(docId, data);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Sil', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteMatch(docId);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
+  // Add match dialog
   void _showAddMatchDialog() {
-    final jsonController = TextEditingController();
+    final homeTeamController = TextEditingController();
+    final awayTeamController = TextEditingController();
+    final dateController = TextEditingController();
+    final timeController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF2D2D2D),
-        title: const Text('Maç Ekle (Admin)', style: TextStyle(color: Colors.white)),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 400,
+        title: const Text(
+          'Yeni Maç Ekle',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: SingleChildScrollView(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'JSON formatında maç bilgilerini girin:',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+              TextField(
+                controller: homeTeamController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Ev Sahibi Takım',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
+                ),
               ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: TextField(
-                  controller: jsonController,
-                  maxLines: null,
-                  expands: true,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: '''[
-  {
-    "evSahibi": "Kocaelispor",
-    "deplasman": "Galatasaray",
-    "tarih": "2025-08-15T21:00:00Z",
-    "saat": "21:00",
-    "lig": "Süper Lig",
-    "stadyum": "Kocaeli Büyükşehir Stadı",
-    "evSahibiLogo": "https://...",
-    "deplasmanLogo": "https://...",
-    "skor": null
-  }
-]''',
-                    hintStyle: TextStyle(color: Colors.grey.shade500),
-                    border: const OutlineInputBorder(),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.grey.shade600),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppTheme.primaryGreen),
-                    ),
-                  ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: awayTeamController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Deplasman Takım',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: dateController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Tarih (YYYY-MM-DD)',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: timeController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Saat (HH:MM)',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
                 ),
               ),
             ],
@@ -1033,53 +888,31 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
+            child: const Text('İptal', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
-              if (jsonController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('JSON verisi boş olamaz'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-
               try {
-                final parsed = jsonDecode(jsonController.text);
-                List<dynamic> matches = parsed is List ? parsed : [parsed];
+                final dateTime = DateTime.parse('${dateController.text} ${timeController.text}:00');
 
-                for (var match in matches) {
-                  final Map<String, dynamic> matchData = Map<String, dynamic>.from(match);
-
-                  // Tarih string'ini Timestamp'e çevir
-                  if (matchData['tarih'] is String) {
-                    final dateTime = DateTime.parse(matchData['tarih']);
-                    matchData['tarih'] = Timestamp.fromDate(dateTime);
-                  }
-
-                  await FirebaseFirestore.instance.collection('maclar').add(matchData);
-                }
-
-                await AdminService.logAdminActivity(
-                  action: 'MATCH_ADDED',
-                  targetType: 'MATCH',
-                  details: {'matchCount': matches.length},
-                );
+                await FirebaseFirestore.instance.collection('maclar').add({
+                  'ev_sahibi': homeTeamController.text,
+                  'deplasman': awayTeamController.text,
+                  'tarih': Timestamp.fromDate(dateTime),
+                  'createdAt': Timestamp.now(),
+                });
 
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${matches.length} maç başarıyla eklendi!'),
+                  const SnackBar(
+                    content: Text('Maç başarıyla eklendi!'),
                     backgroundColor: Colors.green,
                   ),
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('JSON format hatası: $e'),
+                    content: Text('Hata: $e'),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -1090,6 +923,175 @@ class _TakvimSayfasiState extends State<TakvimSayfasi> with TickerProviderStateM
               foregroundColor: Colors.white,
             ),
             child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Edit match dialog
+  void _showEditMatchDialog(String docId, Map<String, dynamic> data) {
+    final homeTeamController = TextEditingController(text: data['ev_sahibi'] ?? '');
+    final awayTeamController = TextEditingController(text: data['deplasman'] ?? '');
+
+    final timestamp = data['tarih'] as Timestamp?;
+    final date = timestamp?.toDate() ?? DateTime.now();
+    final dateController = TextEditingController(
+        text: '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}'
+    );
+    final timeController = TextEditingController(
+        text: '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}'
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2D2D2D),
+        title: const Text(
+          'Maç Düzenle',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: homeTeamController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Ev Sahibi Takım',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: awayTeamController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Deplasman Takım',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: dateController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Tarih (YYYY-MM-DD)',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: timeController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Saat (HH:MM)',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final dateTime = DateTime.parse('${dateController.text} ${timeController.text}:00');
+
+                await FirebaseFirestore.instance
+                    .collection('maclar')
+                    .doc(docId)
+                    .update({
+                  'ev_sahibi': homeTeamController.text,
+                  'deplasman': awayTeamController.text,
+                  'tarih': Timestamp.fromDate(dateTime),
+                  'updatedAt': Timestamp.now(),
+                });
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Maç başarıyla güncellendi!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Hata: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Güncelle'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Delete match
+  void _deleteMatch(String docId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2D2D2D),
+        title: const Text(
+          'Maç Sil',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Bu maçı silmek istediğinizden emin misiniz?',
+          style: TextStyle(color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await FirebaseFirestore.instance
+                    .collection('maclar')
+                    .doc(docId)
+                    .delete();
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Maç başarıyla silindi!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Hata: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sil'),
           ),
         ],
       ),
@@ -1182,9 +1184,17 @@ class _CountdownWidgetState extends State<_CountdownWidget> {
           Text(
             _countdown,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: widget.isKocaelisporTheme ? AppTheme.primaryGreen : AppTheme.primaryGreen,
+              color: widget.isKocaelisporTheme ? Colors.white : AppTheme.primaryGreen,
+              fontFamily: 'monospace',
+            ),
+          ),
+          Text(
+            'GÜN:SAAT:DAK:SAN',
+            style: TextStyle(
+              fontSize: 8,
+              color: widget.isKocaelisporTheme ? Colors.grey.shade500 : Colors.grey.shade600,
             ),
           ),
         ],

@@ -49,7 +49,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     _NavItem(
       icon: Icons.calendar_today_outlined,
       activeIcon: Icons.calendar_today,
-      label: 'Takvim',
+      label: 'Fikstür',
     ),
     _NavItem(
       icon: Icons.forum_outlined,
