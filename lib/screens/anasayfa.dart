@@ -565,13 +565,12 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
           ),
           const SizedBox(height: 12),
 
-          // Biten maç
+          // Biten maç - DÜZELTİLDİ
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('maclar')
-                .where('isFinished', isEqualTo: true)
-                .orderBy('date', descending: true)
-                .limit(1)
+                .orderBy('tarih', descending: true)
+                .limit(20)
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -583,18 +582,36 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
               }
 
               if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                final match = snapshot.data!.docs.first;
-                final data = match.data() as Map<String, dynamic>;
-                return _buildMatchCard(
-                  homeTeam: data['homeTeam'] ?? 'Ev Sahibi',
-                  awayTeam: data['awayTeam'] ?? 'Deplasman',
-                  homeScore: data['homeScore']?.toString() ?? '0',
-                  awayScore: data['awayScore']?.toString() ?? '0',
-                  date: _formatMatchDate(data['date']),
-                  isFinished: true,
-                  isHome: data['isHome'] ?? false,
-                  stadium: data['stadium'] ?? '',
-                );
+                // Biten maçları filtrele (skor varsa biten maç)
+                final finishedMatches = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final skor = data['skor'];
+
+                  if (skor == null) return false;
+
+                  if (skor is Map) {
+                    final evSkor = skor['ev_sahibi'];
+                    final deplasmanSkor = skor['deplasman'];
+                    return evSkor != null && deplasmanSkor != null;
+                  }
+
+                  return false;
+                }).toList();
+
+                if (finishedMatches.isNotEmpty) {
+                  final match = finishedMatches.first;
+                  final data = match.data() as Map<String, dynamic>;
+                  return _buildMatchCard(
+                    homeTeam: data['ev_sahibi'] ?? 'Ev Sahibi',
+                    awayTeam: data['deplasman'] ?? 'Deplasman',
+                    homeScore: _getScoreFromSkor(data['skor'], 'ev_sahibi'),
+                    awayScore: _getScoreFromSkor(data['skor'], 'deplasman'),
+                    date: _formatMatchDate(data['tarih']),
+                    isFinished: true,
+                    isHome: _isKocaelisporHome(data['ev_sahibi']),
+                    stadium: data['stad'] ?? '',
+                  );
+                }
               }
               return _buildEmptyMatchCard('Son Maç', 'Henüz biten maç yok');
             },
@@ -602,14 +619,13 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
 
           const SizedBox(height: 8),
 
-          // Sıradaki maç
+          // Sıradaki maç - DÜZELTİLDİ
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('maclar')
-                .where('isFinished', isEqualTo: false)
-                .where('date', isGreaterThan: Timestamp.now())
-                .orderBy('date', descending: false)
-                .limit(1)
+                .where('tarih', isGreaterThan: Timestamp.now())
+                .orderBy('tarih', descending: false)
+                .limit(10)
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -621,18 +637,27 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
               }
 
               if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                final match = snapshot.data!.docs.first;
-                final data = match.data() as Map<String, dynamic>;
-                return _buildMatchCard(
-                  homeTeam: data['ev_sahibi'] ?? 'Ev Sahibi',
-                  awayTeam: data['deplasman'] ?? 'Deplasman',
-                  homeScore: _getScoreFromSkor(data['skor'], 'ev_sahibi'),
-                  awayScore: _getScoreFromSkor(data['skor'], 'deplasman'),
-                  date: _formatMatchDate(data['tarih']),
-                  isFinished: false,
-                  isHome: (data['ev_sahibi'] ?? '').toLowerCase().contains('kocaelispor'),
-                  stadium: data['stadium'] ?? '',
-                );
+                // Yaklaşan maçları filtrele (skor yoksa yaklaşan maç)
+                final upcomingMatches = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final skor = data['skor'];
+                  return skor == null;
+                }).toList();
+
+                if (upcomingMatches.isNotEmpty) {
+                  final match = upcomingMatches.first;
+                  final data = match.data() as Map<String, dynamic>;
+                  return _buildMatchCard(
+                    homeTeam: data['ev_sahibi'] ?? 'Ev Sahibi',
+                    awayTeam: data['deplasman'] ?? 'Deplasman',
+                    homeScore: '',
+                    awayScore: '',
+                    date: _formatMatchDate(data['tarih']),
+                    isFinished: false,
+                    isHome: _isKocaelisporHome(data['ev_sahibi']),
+                    stadium: data['stad'] ?? '',
+                  );
+                }
               }
               return _buildEmptyMatchCard('Sıradaki Maç', 'Henüz planlanmış maç yok');
             },
@@ -740,7 +765,7 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
                       ),
                       if (isFinished)
                         Text(
-                          _getMatchResult(homeScore, awayScore, isHome),
+                          _calculateMatchResult(homeScore, awayScore, isHome),  // ← YENİ FONKSİYON
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -1034,8 +1059,19 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
       return 'Tarih hatası';
     }
   }
+  String _getScoreFromSkor(dynamic skor, String team) {
+    if (skor == null) return '0';
+    if (skor is Map) {
+      return (skor[team] ?? '0').toString();
+    }
+    return '0';
+  }
 
-  String _getMatchResult(String homeScore, String awayScore, bool isHome) {
+  bool _isKocaelisporHome(String? homeTeam) {
+    if (homeTeam == null) return false;
+    return homeTeam.toLowerCase().contains('kocaelispor');
+  }
+  String _calculateMatchResult(String homeScore, String awayScore, bool isHome) {
     try {
       final home = int.parse(homeScore);
       final away = int.parse(awayScore);
@@ -1053,10 +1089,4 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
       return '';
     }
   }
-  String _getScoreFromSkor(dynamic skor, String team) {
-    if (skor == null) return '0';
-    if (skor is Map) {
-      return (skor[team] ?? '0').toString();
-    }
-    return '0';
-  }}
+  }
