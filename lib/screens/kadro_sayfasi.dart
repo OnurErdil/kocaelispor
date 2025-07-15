@@ -600,7 +600,7 @@ class _KadroSayfasiState extends State<KadroSayfasi>
       builder: (context) => Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.grey.shade900,
+          color: const Color(0xFF1A1A1A), // Kocaelispor siyahı
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -626,7 +626,15 @@ class _KadroSayfasiState extends State<KadroSayfasi>
             ),
             const SizedBox(height: 20),
 
-            // Düzenle butonu
+            // ✅ DÜZENLE BUTONU EKLENDİ
+            ListTile(
+              leading: Icon(Icons.edit, color: const Color(0xFF00A651)), // Kocaelispor yeşili
+              title: const Text('Düzenle', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditPlayerDialog(docId, data);
+              },
+            ),
 
             // Sil butonu
             ListTile(

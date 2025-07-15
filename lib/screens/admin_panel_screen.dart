@@ -623,6 +623,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
           return const Center(child: CircularProgressIndicator());
         }
 
+        if (snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Text(
+              'Henüz oyuncu eklenmemiş',
+              style: TextStyle(color: Colors.white),
+            ),
+          );
+        }
+
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: snapshot.data!.docs.length,
@@ -631,13 +640,57 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
             final data = doc.data() as Map<String, dynamic>;
 
             return Card(
+              color: const Color(0xFF1A1A1A),
+              margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundImage: data['fotoUrl'] != null ? NetworkImage(data['fotoUrl']) : null,
-                  child: data['fotoUrl'] == null ? Text('${data['formaNo'] ?? '?'}') : null,
+                  backgroundImage: data['foto'] != null && data['foto'].isNotEmpty
+                      ? NetworkImage(data['foto'])
+                      : null,
+                  backgroundColor: const Color(0xFF00A651),
+                  child: data['foto'] == null || data['foto'].isEmpty
+                      ? Text(
+                    '${data['numara'] ?? '?'}',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  )
+                      : null,
                 ),
-                title: Text(data['isim'] ?? 'İsim yok'),
-                subtitle: Text('${data['pozisyon'] ?? 'Pozisyon yok'} - Forma: ${data['formaNo'] ?? '?'}'),
+                title: Text(
+                  data['isim'] ?? 'İsim yok',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  '${data['pozisyon'] ?? 'Pozisyon yok'} - Forma: ${data['numara'] ?? '?'}',
+                  style: TextStyle(color: Colors.grey.shade400),
+                ),
+
+                // ✅ POPUP MENU
+                trailing: PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: Colors.grey.shade400),
+                  onSelected: (action) => _handlePlayerAction(action, doc.id, data),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, color: Color(0xFF00A651)),
+                          SizedBox(width: 8),
+                          Text('Düzenle'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Sil'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -804,7 +857,29 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
       ),
     ) ?? false;
   }
-
+  void _handlePlayerAction(String action, String playerId, Map<String, dynamic> playerData) async {
+    switch (action) {
+      case 'edit':
+        _showEditPlayerDialog(playerId, playerData);
+        break;
+      case 'delete':
+        final confirm = await _showConfirmDialog('Bu oyuncuyu silmek istediğinizden emin misiniz?');
+        if (confirm) {
+          try {
+            await FirebaseFirestore.instance.collection('oyuncular').doc(playerId).delete();
+            await AdminService.logAdminActivity(
+              action: 'PLAYER_DELETED',
+              targetType: 'PLAYER',
+              targetId: playerId,
+            );
+            _showSuccessSnackBar('Oyuncu silindi');
+          } catch (e) {
+            _showErrorSnackBar('Oyuncu silinemedi: $e');
+          }
+        }
+        break;
+    }
+  }
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -814,7 +889,174 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
       ),
     );
   }
+  void _showEditPlayerDialog(String playerId, Map<String, dynamic> currentData) {
+    final nameController = TextEditingController(text: currentData['isim'] ?? '');
+    final numberController = TextEditingController(text: (currentData['numara'] ?? '').toString());
+    final photoController = TextEditingController(text: currentData['foto'] ?? '');
+    final flagController = TextEditingController(text: currentData['bayrak'] ?? '');
+    String selectedPosition = currentData['pozisyon'] ?? 'Forvet';
 
+    final positions = ['Kaleci', 'Defans', 'Orta Saha', 'Forvet'];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Row(
+          children: [
+            Icon(Icons.edit, color: const Color(0xFF00A651)),
+            const SizedBox(width: 8),
+            const Text('Oyuncu Düzenle', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Oyuncu Adı',
+                  labelStyle: TextStyle(color: Colors.grey.shade400),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade600),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF00A651)),
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: numberController,
+                decoration: InputDecoration(
+                  labelText: 'Forma Numarası',
+                  labelStyle: TextStyle(color: Colors.grey.shade400),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade600),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF00A651)),
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+
+              DropdownButtonFormField<String>(
+                value: selectedPosition,
+                decoration: InputDecoration(
+                  labelText: 'Pozisyon',
+                  labelStyle: TextStyle(color: Colors.grey.shade400),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade600),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF00A651)),
+                  ),
+                ),
+                dropdownColor: const Color(0xFF1A1A1A),
+                style: const TextStyle(color: Colors.white),
+                items: positions.map((position) {
+                  return DropdownMenuItem(
+                    value: position,
+                    child: Text(position, style: const TextStyle(color: Colors.white)),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  selectedPosition = value!;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: photoController,
+                decoration: InputDecoration(
+                  labelText: 'Fotoğraf URL (İsteğe Bağlı)',
+                  labelStyle: TextStyle(color: Colors.grey.shade400),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade600),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF00A651)),
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: flagController,
+                decoration: InputDecoration(
+                  labelText: 'Bayrak URL (İsteğe Bağlı)',
+                  labelStyle: TextStyle(color: Colors.grey.shade400),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade600),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF00A651)),
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('İptal', style: TextStyle(color: Colors.grey.shade400)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              final numberText = numberController.text.trim();
+              final photo = photoController.text.trim();
+              final flag = flagController.text.trim();
+
+              if (name.isNotEmpty && numberText.isNotEmpty) {
+                final number = int.tryParse(numberText);
+                if (number != null) {
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('oyuncular')
+                        .doc(playerId)
+                        .update({
+                      'isim': name,
+                      'numara': number,
+                      'pozisyon': selectedPosition,
+                      'foto': photo,
+                      'bayrak': flag,
+                      'guncelleme_tarihi': Timestamp.now(),
+                    });
+
+                    await AdminService.logAdminActivity(
+                      action: 'PLAYER_UPDATED',
+                      targetType: 'PLAYER',
+                      targetId: playerId,
+                      details: {'playerName': name},
+                    );
+
+                    Navigator.pop(context);
+                    _showSuccessSnackBar('Oyuncu güncellendi: $name');
+                  } catch (e) {
+                    _showErrorSnackBar('Güncelleme hatası: $e');
+                  }
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00A651),
+            ),
+            child: const Text('Güncelle', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
