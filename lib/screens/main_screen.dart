@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'anasayfa.dart';
+import 'news_page.dart';           // ✅ YENİ EKLEME
 import 'kadro_sayfasi.dart';
 import 'profile_page.dart';
 import 'takvim_sayfasi.dart';
@@ -27,11 +28,12 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   // ✅ SAYFALAR LİSTESİ (6 ADET)
   final List<Widget> _pages = [
     const Anasayfa(),        // 0 - Ana Sayfa
-    const KadroSayfasi(),    // 1 - Kadro
-    const TakvimSayfasi(),   // 2 - Fikstür
-    const ForumSayfasi(),    // 3 - Forum
-    const GaleriSayfasi(),   // 4 - Galeri
-    const ProfilePage(),     // 5 - Profil
+    const NewsPage(),        // 1 - Haberler ✅ YENİ EKLEME
+    const KadroSayfasi(),    // 2 - Kadro
+    const TakvimSayfasi(),   // 3 - Fikstür
+    const ForumSayfasi(),    // 4 - Forum
+    const GaleriSayfasi(),   // 5 - Galeri
+    const ProfilePage(),     // 6 - Profil
   ];
 
   // ✅ NAVIGASYON İTEMLERİ (6 ADET)
@@ -40,6 +42,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       icon: Icons.home_outlined,
       activeIcon: Icons.home,
       label: 'Ana Sayfa',
+    ),
+    _NavItem(                              // ✅ YENİ EKLEME
+      icon: Icons.article_outlined,
+      activeIcon: Icons.article,
+      label: 'Haberler',
     ),
     _NavItem(
       icon: Icons.people_outline,

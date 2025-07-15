@@ -1066,4 +1066,222 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
       ),
     );
   }
-}
+  void _showComingSoonDialog(String feature) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(feature),
+        content: Text('$feature özelliği yakında eklenecek!'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ BU FONKSİYONU EKLEYİN:
+  void _showAddNewsDialog() {
+    final titleController = TextEditingController();
+    final summaryController = TextEditingController();
+    final contentController = TextEditingController();
+    final imageController = TextEditingController();
+    final authorController = TextEditingController();
+    String selectedCategory = 'Genel';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A), // Kocaelispor siyahı
+          title: Row(
+            children: [
+              Icon(Icons.article, color: const Color(0xFF00A651)),
+              const SizedBox(width: 8),
+              const Text('Yeni Haber Ekle', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 500,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Başlık
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      labelText: 'Başlık *',
+                      labelStyle: TextStyle(color: Colors.grey.shade400),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade600),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFF00A651)),
+                      ),
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Kategori
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    decoration: InputDecoration(
+                      labelText: 'Kategori',
+                      labelStyle: TextStyle(color: Colors.grey.shade400),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade600),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFF00A651)),
+                      ),
+                    ),
+                    dropdownColor: const Color(0xFF1A1A1A),
+                    style: const TextStyle(color: Colors.white),
+                    items: ['Genel', 'Maç', 'Transfer', 'Antrenman', 'Kulüp']
+                        .map((cat) => DropdownMenuItem(
+                      value: cat,
+                      child: Text(cat, style: const TextStyle(color: Colors.white)),
+                    ))
+                        .toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedCategory = value!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Özet
+                  TextField(
+                    controller: summaryController,
+                    decoration: InputDecoration(
+                      labelText: 'Özet',
+                      labelStyle: TextStyle(color: Colors.grey.shade400),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade600),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFF00A651)),
+                      ),
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // İçerik
+                  TextField(
+                    controller: contentController,
+                    decoration: InputDecoration(
+                      labelText: 'İçerik *',
+                      labelStyle: TextStyle(color: Colors.grey.shade400),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade600),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFF00A651)),
+                      ),
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                    maxLines: 5,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Resim URL
+                  TextField(
+                    controller: imageController,
+                    decoration: InputDecoration(
+                      labelText: 'Resim URL (İsteğe Bağlı)',
+                      labelStyle: TextStyle(color: Colors.grey.shade400),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade600),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFF00A651)),
+                      ),
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Yazar
+                  TextField(
+                    controller: authorController,
+                    decoration: InputDecoration(
+                      labelText: 'Yazar',
+                      labelStyle: TextStyle(color: Colors.grey.shade400),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade600),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFF00A651)),
+                      ),
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('İptal', style: TextStyle(color: Colors.grey.shade400)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final title = titleController.text.trim();
+                final content = contentController.text.trim();
+
+                if (title.isEmpty || content.isEmpty) {
+                  _showErrorSnackBar('Başlık ve İçerik zorunludur!');
+                  return;
+                }
+
+                try {
+                  await FirebaseFirestore.instance.collection('haberler').add({
+                    'baslik': title,
+                    'kategori': selectedCategory,
+                    'ozet': summaryController.text.trim(),
+                    'icerik': content,
+                    'resimUrl': imageController.text.trim(),
+                    'yazar': authorController.text.trim().isEmpty
+                        ? 'Admin'
+                        : authorController.text.trim(),
+                    'tarih': Timestamp.now(),
+                    'olusturanAdmin': FirebaseAuth.instance.currentUser?.email,
+                  });
+
+                  await AdminService.logAdminActivity(
+                    action: 'NEWS_CREATED',
+                    targetType: 'NEWS',
+                    details: {
+                      'title': title,
+                      'category': selectedCategory,
+                    },
+                  );
+
+                  Navigator.pop(context);
+                  _showSuccessSnackBar('Haber başarıyla eklendi!');
+
+                } catch (e) {
+                  _showErrorSnackBar('Haber eklenemedi: $e');
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00A651),
+              ),
+              child: const Text('Ekle', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+} // ← Class kapanış parant
