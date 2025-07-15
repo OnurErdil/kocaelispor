@@ -621,14 +621,6 @@ class _KadroSayfasiState extends State<KadroSayfasi>
             const SizedBox(height: 20),
 
             // Düzenle butonu
-            ListTile(
-              leading: Icon(Icons.edit, color: Colors.blue.shade400),
-              title: const Text('Düzenle', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                _showEditPlayerDialog(docId, data);
-              },
-            ),
 
             // Sil butonu
             ListTile(
@@ -659,7 +651,7 @@ class _KadroSayfasiState extends State<KadroSayfasi>
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey.shade900,
+        backgroundColor: const Color(0xFF1A1A1A), // Daha siyah
         title: const Text('Yeni Oyuncu Ekle', style: TextStyle(color: Colors.white)),
         content: SingleChildScrollView(
           child: Column(
@@ -778,7 +770,7 @@ class _KadroSayfasiState extends State<KadroSayfasi>
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
+              backgroundColor: const Color(0xFF1B5E20),
             ),
             child: const Text('Ekle', style: TextStyle(color: Colors.white)),
           ),
@@ -792,7 +784,7 @@ class _KadroSayfasiState extends State<KadroSayfasi>
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey.shade900,
+        backgroundColor: const Color(0xFF1A1A1A), // Daha siyah
         title: const Text('Oyuncu Sil', style: TextStyle(color: Colors.white)),
         content: Text(
           '"${data['isim'] ?? 'Bu oyuncu'}" adlı oyuncuyu silmek istediğinizden emin misiniz?',
@@ -854,7 +846,7 @@ class _KadroSayfasiState extends State<KadroSayfasi>
                 Text('$name başarıyla eklendi'),
               ],
             ),
-            backgroundColor: Colors.green.shade600,
+            backgroundColor: const Color(0xFF1B5E20),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -870,7 +862,10 @@ class _KadroSayfasiState extends State<KadroSayfasi>
         );
       }
     }
-  }
+// ✅ OYUNCU DÜZENLEME FONKSİYONU - CLASS İÇİNDE EKLE
+
+
+  } // ← CLASS BURADA BİTER
 
   // Oyuncu güncelleme fonksiyonu ✅
   Future<void> _updatePlayer(String docId, String name, int number, String position, String photo, String flag) async {
@@ -908,7 +903,7 @@ class _KadroSayfasiState extends State<KadroSayfasi>
                 Text('$name başarıyla güncellendi'),
               ],
             ),
-            backgroundColor: Colors.green.shade600,
+            backgroundColor: const Color(0xFF1B5E20),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -950,7 +945,7 @@ class _KadroSayfasiState extends State<KadroSayfasi>
                 Text('${data['isim'] ?? 'Oyuncu'} başarıyla silindi'),
               ],
             ),
-            backgroundColor: Colors.green.shade600,
+            backgroundColor: const Color(0xFF1B5E20),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1046,7 +1041,7 @@ class _KadroSayfasiState extends State<KadroSayfasi>
           ElevatedButton(
             onPressed: () => setState(() {}),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
+              backgroundColor: const Color(0xFF1B5E20), // Kocaelispor yeşili
             ),
             child: const Text('Tekrar Dene', style: TextStyle(color: Colors.white)),
           ),
@@ -1054,145 +1049,173 @@ class _KadroSayfasiState extends State<KadroSayfasi>
       ),
     );
   }
-}
-
-// Oyuncu düzenleme dialog'u ✅
-Future<void> _showEditPlayerDialog(String docId, Map<String, dynamic> currentData) async {
-  final TextEditingController nameController = TextEditingController(text: currentData['isim'] ?? '');
-  final TextEditingController numberController = TextEditingController(text: (currentData['formaNo'] ?? '').toString());
-  final TextEditingController photoController = TextEditingController(text: currentData['fotoUrl'] ?? '');
-  final TextEditingController flagController = TextEditingController(text: currentData['bayrakUrl'] ?? '');
-  String selectedPosition = currentData['pozisyon'] ?? 'Forvet';
-
-  final positions = ['Kaleci', 'Defans', 'Orta Saha', 'Forvet'];
-
-  await showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: Colors.grey.shade900,
-      title: const Text('Oyuncu Düzenle', style: TextStyle(color: Colors.white)),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: 'Oyuncu Adı',
-                labelStyle: TextStyle(color: Colors.grey.shade400),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade600),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.green.shade400),
-                ),
-              ),
-              style: const TextStyle(color: Colors.white),
-            ),
-            const SizedBox(height: 16),
-
-            TextField(
-              controller: numberController,
-              decoration: InputDecoration(
-                labelText: 'Forma Numarası',
-                labelStyle: TextStyle(color: Colors.grey.shade400),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade600),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.green.shade400),
-                ),
-              ),
-              style: const TextStyle(color: Colors.white),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-
-            DropdownButtonFormField<String>(
-              value: selectedPosition,
-              decoration: InputDecoration(
-                labelText: 'Pozisyon',
-                labelStyle: TextStyle(color: Colors.grey.shade400),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade600),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.green.shade400),
-                ),
-              ),
-              dropdownColor: Colors.grey.shade800,
-              style: const TextStyle(color: Colors.white),
-              items: positions.map((position) {
-                return DropdownMenuItem(
-                  value: position,
-                  child: Text(position, style: const TextStyle(color: Colors.white)),
-                );
-              }).toList(),
-              onChanged: (value) {
-                selectedPosition = value!;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            TextField(
-              controller: photoController,
-              decoration: InputDecoration(
-                labelText: 'Fotoğraf URL',
-                labelStyle: TextStyle(color: Colors.grey.shade400),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade600),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.green.shade400),
-                ),
-              ),
-              style: const TextStyle(color: Colors.white),
-            ),
-            const SizedBox(height: 16),
-
-            TextField(
-              controller: flagController,
-              decoration: InputDecoration(
-                labelText: 'Bayrak URL',
-                labelStyle: TextStyle(color: Colors.grey.shade400),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade600),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.green.shade400),
-                ),
-              ),
-              style: const TextStyle(color: Colors.white),
-            ),
-          ],
+  Future<void> _showDeleteConfirmation(String docId, Map<String, dynamic> data) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A), // Daha siyah
+        title: const Text('Oyuncu Sil', style: TextStyle(color: Colors.white)),
+        content: Text(
+          '"${data['isim'] ?? 'Bu oyuncu'}" adlı oyuncuyu silmek istediğinizden emin misiniz?',
+          style: const TextStyle(color: Colors.white),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('İptal', style: TextStyle(color: Colors.grey.shade400)),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            final name = nameController.text.trim();
-            final numberText = numberController.text.trim();
-            final photo = photoController.text.trim();
-            final flag = flagController.text.trim();
-
-            if (name.isNotEmpty && numberText.isNotEmpty) {
-              final number = int.tryParse(numberText);
-              if (number != null) {
-                await _updatePlayer(docId, name, number, selectedPosition, photo, flag);
-                Navigator.pop(context);
-              }
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green.shade600,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('İptal', style: TextStyle(color: Colors.grey.shade400)),
           ),
-          child: const Text('Güncelle', style: TextStyle(color: Colors.white)),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _deletePlayer(docId, data);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+            ),
+            child: const Text('Sil', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+  Future<void> _showEditPlayerDialog(String docId, Map<String, dynamic> currentData) async {
+    final TextEditingController nameController = TextEditingController(text: currentData['isim'] ?? '');
+    final TextEditingController numberController = TextEditingController(text: (currentData['formaNo'] ?? '').toString());
+    final TextEditingController photoController = TextEditingController(text: currentData['fotoUrl'] ?? '');
+    final TextEditingController flagController = TextEditingController(text: currentData['bayrakUrl'] ?? '');
+    String selectedPosition = currentData['pozisyon'] ?? 'Forvet';
+
+    final positions = ['Kaleci', 'Defans', 'Orta Saha', 'Forvet'];
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A), // Kocaelispor siyahı
+        title: const Text('Oyuncu Düzenle', style: TextStyle(color: Colors.white)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Oyuncu Adı',
+                  labelStyle: TextStyle(color: Colors.grey.shade400),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade600),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF1B5E20)), // Kocaelispor yeşili
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: numberController,
+                decoration: InputDecoration(
+                  labelText: 'Forma Numarası',
+                  labelStyle: TextStyle(color: Colors.grey.shade400),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade600),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF1B5E20)),
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+
+              DropdownButtonFormField<String>(
+                value: selectedPosition,
+                decoration: InputDecoration(
+                  labelText: 'Pozisyon',
+                  labelStyle: TextStyle(color: Colors.grey.shade400),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade600),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF1B5E20)),
+                  ),
+                ),
+                dropdownColor: Colors.grey.shade800,
+                style: const TextStyle(color: Colors.white),
+                items: positions.map((position) {
+                  return DropdownMenuItem(
+                    value: position,
+                    child: Text(position, style: const TextStyle(color: Colors.white)),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  selectedPosition = value!;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: photoController,
+                decoration: InputDecoration(
+                  labelText: 'Fotoğraf URL (İsteğe Bağlı)',
+                  labelStyle: TextStyle(color: Colors.grey.shade400),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade600),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF1B5E20)),
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: flagController,
+                decoration: InputDecoration(
+                  labelText: 'Bayrak URL (İsteğe Bağlı)',
+                  labelStyle: TextStyle(color: Colors.grey.shade400),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade600),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Color(0xFF1B5E20)),
+                  ),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
         ),
-      ],
-    ),
-  );
-}
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('İptal', style: TextStyle(color: Colors.grey.shade400)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              final numberText = numberController.text.trim();
+              final photo = photoController.text.trim();
+              final flag = flagController.text.trim();
+
+              if (name.isNotEmpty && numberText.isNotEmpty) {
+                final number = int.tryParse(numberText);
+                if (number != null) {
+                  await _updatePlayer(docId, name, number, selectedPosition, photo, flag);
+                  Navigator.pop(context);
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1B5E20), // Kocaelispor yeşili
+            ),
+            child: const Text('Güncelle', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+} // ← CLASS BURAS BURADA Bİ
