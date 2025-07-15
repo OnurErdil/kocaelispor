@@ -66,6 +66,12 @@ class _KadroSayfasiState extends State<KadroSayfasi>
 
   @override
   Widget build(BuildContext context) {
+    // ✅ DEBUG: Auth durumunu kontrol et
+    final user = FirebaseAuth.instance.currentUser;
+    print('🔍 Current user: ${user?.email}');
+    print('🔍 User ID: ${user?.uid}');
+    print('🔍 Email verified: ${user?.emailVerified}');
+
     return Scaffold(
       backgroundColor: Colors.black, // ✅ Siyah arka plan
       appBar: AppBar(
@@ -118,8 +124,8 @@ class _KadroSayfasiState extends State<KadroSayfasi>
           ),
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
-                .collection('Takım') // ✅ Doğru koleksiyon adı
-                .orderBy('formaNo')
+                .collection('oyuncular') // ✅ Doğru koleksiyon adı
+                .orderBy('numara')
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -329,9 +335,9 @@ class _KadroSayfasiState extends State<KadroSayfasi>
   // Modern oyuncu kartı ✅
   Widget _buildPlayerCard(Map<String, dynamic> data, String docId, Color positionColor) {
     final playerName = data['isim'] ?? 'Bilinmeyen';
-    final playerNumber = data['formaNo'] ?? 0;
-    final playerPhoto = data['fotoUrl'] ?? '';
-    final flagUrl = data['bayrakUrl'] ?? '';
+    final playerNumber = data['numara'] ?? 0;
+    final playerPhoto = data['foto'] ?? '';
+    final flagUrl = data['bayrak'] ?? '';
 
     return GestureDetector(
       onTap: () {
@@ -780,102 +786,70 @@ class _KadroSayfasiState extends State<KadroSayfasi>
   }
 
   // Silme onayı ✅
-  Future<void> _showDeleteConfirmation(String docId, Map<String, dynamic> data) async {
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A), // Daha siyah
-        title: const Text('Oyuncu Sil', style: TextStyle(color: Colors.white)),
-        content: Text(
-          '"${data['isim'] ?? 'Bu oyuncu'}" adlı oyuncuyu silmek istediğinizden emin misiniz?',
-          style: const TextStyle(color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('İptal', style: TextStyle(color: Colors.grey.shade400)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _deletePlayer(docId, data);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-            ),
-            child: const Text('Sil', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-  // Oyuncu ekleme fonksiyonu ✅
-  // Oyuncu ekleme fonksiyonu
-  Future<void> _addPlayer(String name, int number, String position, String photo, String flag) async {
-    try {
-      await FirebaseFirestore.instance.collection('Takım').add({
-        'isim': name,
-        'formaNo': number,
-        'pozisyon': position,
-        'fotoUrl': photo.isNotEmpty ? photo : null,
-        'bayrakUrl': flag.isNotEmpty ? flag : null,
-        'olusturmaTarihi': FieldValue.serverTimestamp(),
-        'olusturan': FirebaseAuth.instance.currentUser?.email ?? 'Admin',
-      });
 
-      await AdminService.logAdminActivity(
-        action: 'PLAYER_ADDED',
-        targetType: 'PLAYER',
-        targetId: name,
-        details: {
-          'playerName': name,
-          'playerNumber': number,
-          'position': position,
-        },
+  // Oyuncu ekleme fonksiyonu ✅
+  Future<void> _addPlayer(String name, int number, String position, String? photo, String? flag) async {
+    try {
+      print('🔍 Oyuncu ekleniyor: $name, $number, $position');
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('❌ Kullanıcı giriş yapmamış');
+        throw Exception('Giriş yapmalısınız');
+      }
+
+      print('🔍 User: ${user.email}');
+
+      final playerData = {
+        'isim': name,
+        'numara': number,          // ← DOĞRU FIELD NAME
+        'pozisyon': position,
+        'foto': photo ?? '',       // ← DOĞRU FIELD NAME
+        'bayrak': flag ?? '',      // ← DOĞRU FIELD NAME
+        'olusturan': user.email,
+        'olusturma_tarihi': Timestamp.now(),
+      };
+
+      print('🔍 Player data: $playerData');
+
+      await FirebaseFirestore.instance
+          .collection('oyuncular')
+          .add(playerData);
+
+      print('✅ Oyuncu başarıyla eklendi');
+
+      // ✅ UI'yi zorla güncelle
+      if (mounted) {
+        setState(() {});
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ $name başarıyla eklendi!'),
+          backgroundColor: const Color(0xFF00A651), // Kocaelispor yeşili
+        ),
       );
 
-      AnalyticsService.logAddPlayer(name);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text('$name başarıyla eklendi'),
-              ],
-            ),
-            backgroundColor: const Color(0xFF1B5E20),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Oyuncu eklenemedi: $e'),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      print('❌ Oyuncu ekleme hatası: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Hata: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-// ✅ OYUNCU DÜZENLEME FONKSİYONU - CLASS İÇİNDE EKLE
-
-
-  } // ← CLASS BURADA BİTER
+  }
 
   // Oyuncu güncelleme fonksiyonu ✅
   Future<void> _updatePlayer(String docId, String name, int number, String position, String photo, String flag) async {
     try {
-      await FirebaseFirestore.instance.collection('Takım').doc(docId).update({
+      await FirebaseFirestore.instance.collection('oyuncular').doc(docId).update({
         'isim': name,
-        'formaNo': number,
+        'numara': number,
         'pozisyon': position,
-        'fotoUrl': photo.isNotEmpty ? photo : null,
-        'bayrakUrl': flag.isNotEmpty ? flag : null,
+        'foto': photo.isNotEmpty ? photo : null,
+        'bayrak': flag.isNotEmpty ? flag : null,
         'guncellenmeTarihi': FieldValue.serverTimestamp(),
         'guncelleyen': FirebaseAuth.instance.currentUser?.email ?? 'Admin',
       });
@@ -923,7 +897,7 @@ class _KadroSayfasiState extends State<KadroSayfasi>
   // Oyuncu silme fonksiyonu ✅
   Future<void> _deletePlayer(String docId, Map<String, dynamic> data) async {
     try {
-      await FirebaseFirestore.instance.collection('Takım').doc(docId).delete();
+      await FirebaseFirestore.instance.collection('oyuncular').doc(docId).delete();
 
       await AdminService.logAdminActivity(
         action: 'PLAYER_DELETED',
@@ -931,7 +905,7 @@ class _KadroSayfasiState extends State<KadroSayfasi>
         targetId: docId,
         details: {
           'playerName': data['isim'],
-          'playerNumber': data['formaNo'],
+          'playerNumber': data['numara'],
         },
       );
 
@@ -1080,9 +1054,9 @@ class _KadroSayfasiState extends State<KadroSayfasi>
   }
   Future<void> _showEditPlayerDialog(String docId, Map<String, dynamic> currentData) async {
     final TextEditingController nameController = TextEditingController(text: currentData['isim'] ?? '');
-    final TextEditingController numberController = TextEditingController(text: (currentData['formaNo'] ?? '').toString());
-    final TextEditingController photoController = TextEditingController(text: currentData['fotoUrl'] ?? '');
-    final TextEditingController flagController = TextEditingController(text: currentData['bayrakUrl'] ?? '');
+    final TextEditingController numberController = TextEditingController(text: (currentData['numara'] ?? '').toString());
+    final TextEditingController photoController = TextEditingController(text: currentData['foto'] ?? '');
+    final TextEditingController flagController = TextEditingController(text: currentData['bayrak'] ?? '');
     String selectedPosition = currentData['pozisyon'] ?? 'Forvet';
 
     final positions = ['Kaleci', 'Defans', 'Orta Saha', 'Forvet'];
@@ -1213,9 +1187,57 @@ class _KadroSayfasiState extends State<KadroSayfasi>
             ),
             child: const Text('Güncelle', style: TextStyle(color: Colors.white)),
           ),
+          IconButton(
+            icon: const Icon(Icons.bug_report, color: Colors.orange),
+            onPressed: _testFirebaseConnection,
+          ),
         ],
       ),
     );
   }
+  Future<void> _testFirebaseConnection() async {
+    try {
+      print('🔍 Firebase bağlantısı test ediliyor...');
 
+      // Test 1: Kullanıcı durumu
+      final user = FirebaseAuth.instance.currentUser;
+      print('🔍 User: ${user?.email}');
+
+      // Test 2: Firestore okuma testi
+      final testDoc = await FirebaseFirestore.instance
+          .collection('oyuncular')
+          .limit(1)
+          .get();
+
+      print('✅ Firestore okuma başarılı: ${testDoc.docs.length} dokuman');
+
+      // Test 3: Firestore yazma testi
+      await FirebaseFirestore.instance
+          .collection('test_collection')
+          .doc('test_doc')
+          .set({
+        'test': true,
+        'timestamp': Timestamp.now(),
+        'user': user?.email,
+      });
+
+      print('✅ Firestore yazma başarılı');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🎉 Firebase bağlantısı başarılı!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+    } catch (e) {
+      print('❌ Firebase test hatası: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Hata: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 } // ← CLASS BURAS BURADA Bİ

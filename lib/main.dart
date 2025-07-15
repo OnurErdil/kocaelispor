@@ -4,7 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 // Firebase options
 import 'firebase_options.dart';
 
@@ -42,7 +43,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ ÇOK ÖNEMLİ: Tüm provider'ları burada tanımla
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => TabProvider()),
@@ -57,10 +57,25 @@ class MyApp extends StatelessWidget {
                 title: 'Kocaelispor 1966',
                 theme: AppTheme.lightTheme,
                 darkTheme: AppTheme.darkTheme,
-                themeMode: themeProvider.themeMode,  // ✅ Tema provider'dan al
-                locale: languageProvider.currentLocale,  // ✅ Dil provider'dan al
+                themeMode: themeProvider.themeMode,
+                locale: languageProvider.currentLocale,
                 home: const SplashScreen(),
                 debugShowCheckedModeBanner: false,
+
+                // ✅ YENİ EKLEME: Mouse tracker optimize
+                builder: (context, child) {
+                  if (kIsWeb) {
+                    // Web'de mouse events'i optimize et
+                    return ScrollConfiguration(
+                      behavior: const MaterialScrollBehavior().copyWith(
+                        scrollbars: false,
+                        overscroll: false,
+                      ),
+                      child: child!,
+                    );
+                  }
+                  return child!;
+                },
               );
             },
           );

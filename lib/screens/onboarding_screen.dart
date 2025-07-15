@@ -1,4 +1,4 @@
-// lib/screens/onboarding_screen.dart
+// lib/screens/onboarding_screen.dart - DÜZELTİLMİŞ VERSİYON
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
@@ -65,7 +65,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Üst kısım - Skip butonu
+              // Üst kısım - Logo ve Skip butonu
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -113,7 +113,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
 
-              // Ana içerik
+              // Ana içerik - PageView
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
@@ -133,6 +133,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Sayfa göstergeleri (dots)
                     Row(
@@ -158,7 +159,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               );
                             },
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
                             ),
                             child: const Text('Geri'),
                           )
@@ -180,7 +184,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _pages[_currentPage].color,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 12,
+                            ),
                             elevation: 2,
                           ),
                           child: Text(
