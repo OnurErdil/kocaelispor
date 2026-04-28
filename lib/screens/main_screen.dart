@@ -160,52 +160,58 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       ),
       child: SafeArea(
         child: Container(
-          height: 65,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(_navItems.length, (index) {
               final item = _navItems[index];
               final isSelected = _currentIndex == index;
 
-              return GestureDetector(
-                onTap: () => _onItemTapped(index),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Colors.green.shade700.withOpacity(0.2)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    border: isSelected
-                        ? Border.all(color: Colors.green.shade700, width: 1)
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isSelected ? item.activeIcon : item.icon,
-                        color: isSelected
-                            ? Colors.green.shade400
-                            : Colors.grey.shade500,
-                        size: 22,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.label,
-                        style: TextStyle(
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => _onItemTapped(index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Colors.green.shade700.withOpacity(0.2)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      border: isSelected
+                          ? Border.all(color: Colors.green.shade700, width: 1)
+                          : null,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isSelected ? item.activeIcon : item.icon,
                           color: isSelected
                               ? Colors.green.shade400
                               : Colors.grey.shade500,
-                          fontSize: 10,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
+                          size: 20,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: isSelected
+                                ? Colors.green.shade400
+                                : Colors.grey.shade500,
+                            fontSize: 9,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
