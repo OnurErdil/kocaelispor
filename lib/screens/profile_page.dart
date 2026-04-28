@@ -573,23 +573,29 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.orange.shade50,
+                                color: Colors.orange.shade100,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.orange.shade200),
+                                border: Border.all(
+                                  color: Colors.orange.shade400,
+                                  width: 1.2,
+                                ),
                               ),
                               child: Row(
                                 children: [
                                   Icon(
                                     Icons.info_outline,
-                                    color: Colors.orange.shade700,
+                                    color: Colors.orange.shade900,
+                                    size: 20,
                                   ),
                                   const SizedBox(width: 8),
-                                  const Expanded(
+                                  Expanded(
                                     child: Text(
                                       "E-posta adresiniz henüz doğrulanmamış. Mail kutunuzu kontrol edin.",
                                       style: TextStyle(
                                         fontSize: 13,
-                                        fontWeight: FontWeight.w500,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.orange.shade900,
+                                        height: 1.3,
                                       ),
                                     ),
                                   ),
