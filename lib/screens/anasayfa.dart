@@ -188,15 +188,18 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
 
   // Menü çubuğu
   Widget _buildMenuBar() {
+    // Bu indexler, lib/screens/main_screen.dart içindeki _pages sırası ile aynı olmalı.
+    // MainScreen sırası:
+    // 0 Ana Sayfa, 1 Haberler, 2 Kadro, 3 Fikstür, 4 Forum, 5 Galeri, 6 Profil
     final menuItems = [
       {'title': 'Ana Sayfa', 'icon': Icons.home_outlined, 'index': 0},
-      {'title': 'Kadro', 'icon': Icons.people_outline, 'index': 1},
-      {'title': 'Fikstür', 'icon': Icons.calendar_month, 'index': 2},
-      {'title': 'Puan Durumu', 'icon': Icons.emoji_events, 'index': 2},
-      {'title': 'Forum', 'icon': Icons.chat_bubble_outline, 'index': 3},
-      {'title': 'Haberler', 'icon': Icons.newspaper, 'index': -1},
-      {'title': 'Galeri', 'icon': Icons.image, 'index': 4},
-      {'title': 'Profil', 'icon': Icons.account_circle, 'index': 5},
+      {'title': 'Haberler', 'icon': Icons.newspaper, 'index': 1},
+      {'title': 'Kadro', 'icon': Icons.people_outline, 'index': 2},
+      {'title': 'Fikstür', 'icon': Icons.calendar_month, 'index': 3},
+      {'title': 'Puan Durumu', 'icon': Icons.emoji_events, 'index': 3},
+      {'title': 'Forum', 'icon': Icons.chat_bubble_outline, 'index': 4},
+      {'title': 'Galeri', 'icon': Icons.image, 'index': 5},
+      {'title': 'Profil', 'icon': Icons.account_circle, 'index': 6},
     ];
 
     return Container(
@@ -260,15 +263,12 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
 
   // Menü tıklama işlevi
   void _handleMenuTap(int index) {
-    if (index == -1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const NewsPage()),
-      );
-    } else {
-      final tabProvider = Provider.of<TabProvider>(context, listen: false);
-      tabProvider.changeTab(index);  // ✅ BU DOĞRU
+    // Geçersiz index gelirse uygulama hata vermesin diye güvenlik kontrolü.
+    if (index < 0 || index > 6) {
+      return;
     }
+    final tabProvider = Provider.of<TabProvider>(context, listen: false);
+    tabProvider.changeTab(index);
   }
 
   // Takım fotoları slider'ı
