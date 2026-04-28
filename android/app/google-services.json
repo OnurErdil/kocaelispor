@@ -50,6 +50,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "795646490074-51qiec1lurj3h0bjl4jkt3a0ejvt4jdr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kocaelisporfanmobil.app",
+            "certificate_hash": "d52e40c093320672e996d26dee5d12b84f209a02"
+          }
+        },
+        {
           "client_id": "795646490074-61e5diav09t2564h852msg3cqsm14gjp.apps.googleusercontent.com",
           "client_type": 3
         }

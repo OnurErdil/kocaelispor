@@ -35,8 +35,10 @@ class GoogleSignInService {
 
       return userCredential;
     } catch (e) {
-      print("Google Sign-In Hatası: $e");
-      rethrow;
+      // Şimdilik hatayı uygulamayı çökertmeden yakalıyoruz.
+      // Google OAuth ayarı eksikse burada origin_mismatch / ApiException gibi hata görülebilir.
+      print("❌ Google Sign-In Hatası: $e");
+      return null;
     }
   }
 
