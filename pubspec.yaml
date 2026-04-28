@@ -37,6 +37,5 @@ dev_dependencies:
 flutter:
   generate: true
   assets:
-    - assets/images/stadium_bg.png
     - assets/images/avatar_placeholder.png
   uses-material-design: true

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../services/analytics_service.dart';
 import '../services/google_signin_service.dart';
 import '../theme/app_theme.dart';
@@ -525,17 +526,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         ),
         icon: Container(
           padding: const EdgeInsets.all(2),
-          child: Image.asset(
-            'assets/images/google_logo.png',
-            width: 24,
-            height: 24,
-            errorBuilder: (context, error, stackTrace) {
-              return const Icon(
-                Icons.login,
-                color: Colors.red,
-                size: 24,
-              );
-            },
+          child: const FaIcon(
+            FontAwesomeIcons.google,
+            size: 22,
+            color: Colors.red,
           ),
         ),
         label: const Text(
