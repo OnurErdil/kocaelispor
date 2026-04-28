@@ -1,0 +1,136 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && (
+          currentUserDoc().data.isAdmin == true
+          || currentUserDoc().data.role == 'admin'
+        );
+    }
+
+    function isPublicAdminCollection(collectionName) {
+      return collectionName in [
+        'haberler',
+        'maclar',
+        'Takım',
+        'team_photos',
+        'puan_durumu',
+        'standings'
+      ];
+    }
+
+    function hasOwnerField() {
+      return request.resource.data.keys().hasAny([
+        'uid',
+        'userId',
+        'authorId',
+        'olusturanId',
+        'createdBy'
+      ]);
+    }
+
+    function isCreatingOwnContent() {
+      return signedIn()
+        && (
+          request.resource.data.uid == request.auth.uid
+          || request.resource.data.userId == request.auth.uid
+          || request.resource.data.authorId == request.auth.uid
+          || request.resource.data.olusturanId == request.auth.uid
+          || request.resource.data.createdBy == request.auth.uid
+        );
+    }
+
+    function isExistingContentOwner() {
+      return signedIn()
+        && (
+          resource.data.uid == request.auth.uid
+          || resource.data.userId == request.auth.uid
+          || resource.data.authorId == request.auth.uid
+          || resource.data.olusturanId == request.auth.uid
+          || resource.data.createdBy == request.auth.uid
+        );
+    }
+
+    // Kullanıcı belgeleri
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow create: if isOwner(userId);
+
+      allow update: if isOwner(userId)
+        && request.resource.data.isAdmin == resource.data.isAdmin
+        && request.resource.data.role == resource.data.role;
+
+      allow update, delete: if isAdmin();
+
+      // Kullanıcıya özel alt koleksiyonlar
+      match /{document=**} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Herkese açık okunabilir, sadece admin yazabilir koleksiyonlar
+    // Not: "Takım" Türkçe karakter içerdiği için doğrudan match /Takım yazmıyoruz.
+    match /{collectionName}/{document} {
+      allow read: if isPublicAdminCollection(collectionName);
+      allow write: if isPublicAdminCollection(collectionName) && isAdmin();
+    }
+
+    // Forum kategorileri: herkes okuyabilir, sadece admin yönetebilir
+    match /forum_kategorileri/{document} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Forum konuları: giriş yapan konu açabilir, sahibi/admin yönetebilir
+    match /forum_konulari/{document} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && (
+          !hasOwnerField()
+          || isCreatingOwnContent()
+        );
+
+      allow update, delete: if isExistingContentOwner() || isAdmin();
+    }
+
+    // Forum mesajları: giriş yapan mesaj yazabilir, sahibi/admin yönetebilir
+    match /forum_mesajlari/{document} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && (
+          !hasOwnerField()
+          || isCreatingOwnContent()
+        );
+
+      allow update, delete: if isExistingContentOwner() || isAdmin();
+    }
+
+    // Admin logları: sadece admin okuyabilir/yazabilir
+    match /admin_logs/{document} {
+      allow read, write: if isAdmin();
+    }
+
+    // Bilinmeyen tüm yollar kapalı
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
