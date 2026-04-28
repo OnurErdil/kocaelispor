@@ -16,7 +16,8 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
-  final user = FirebaseAuth.instance.currentUser;
+  User? get user => FirebaseAuth.instance.currentUser;
+
   bool isLoading = false;
   bool isAdmin = false;
   late AnimationController _animationController;
@@ -40,6 +41,64 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  Future<void> refreshUserStatus({bool showMessage = true}) async {
+    if (user == null) return;
+
+    setState(() => isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.currentUser?.reload();
+      await _checkAdminStatus();
+
+      if (mounted) {
+        setState(() {});
+
+        if (showMessage) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(
+                    user?.emailVerified == true
+                        ? Icons.verified
+                        : Icons.info_outline,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      user?.emailVerified == true
+                          ? "E-posta doğrulaması onaylandı!"
+                          : "E-posta henüz doğrulanmamış görünüyor.",
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: user?.emailVerified == true
+                  ? Colors.green.shade600
+                  : Colors.orange.shade600,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Doğrulama durumu yenilenemedi: ${e.toString()}"),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
   }
 
   Future<void> _checkAdminStatus() async {
@@ -157,8 +216,12 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             content: const Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text("Doğrulama e-postası gönderildi!"),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Doğrulama e-postası gönderildi. Maili onayladıktan sonra durumu yenileyin.",
+                  ),
+                ),
               ],
             ),
             backgroundColor: Colors.green.shade600,
@@ -276,9 +339,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: () async {
-              await user!.reload();
-              await _checkAdminStatus();
-              setState(() {});
+              await refreshUserStatus(showMessage: false);
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -506,18 +567,67 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                             const SizedBox(height: 12),
                           ],
 
-                          // Email verification button
+                          // Email verification buttons
                           if (!user!.emailVerified) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.orange.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: Colors.orange.shade700,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      "E-posta adresiniz henüz doğrulanmamış. Mail kutunuzu kontrol edin.",
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
                             SizedBox(
                               width: double.infinity,
                               height: 50,
                               child: ElevatedButton.icon(
                                 onPressed: isLoading ? null : sendEmailVerification,
                                 icon: const Icon(Icons.mark_email_read),
-                                label: const Text("E-posta Doğrula"),
+                                label: const Text("Doğrulama Maili Gönder"),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.orange.shade600,
                                   foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: OutlinedButton.icon(
+                                onPressed: isLoading
+                                    ? null
+                                    : () => refreshUserStatus(showMessage: true),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text("Doğrulama Durumunu Yenile"),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.orange.shade700,
+                                  side: BorderSide(color: Colors.orange.shade400),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
