@@ -203,7 +203,7 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
     ];
 
     return Container(
-      height: 80,
+      height: 76,
       color: Colors.grey.shade900,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -230,8 +230,9 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 90,
-        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+        width: 86,
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.3),
           borderRadius: BorderRadius.circular(12),
@@ -239,18 +240,21 @@ class _AnasayfaState extends State<Anasayfa> with SingleTickerProviderStateMixin
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
               color: Colors.green.shade400,
-              size: 20,
+              size: 19,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
