@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'main_screen.dart';
-import '../widgets/custom_app_bar.dart'; // ✅ Import ekleyin
+import '../widgets/custom_app_bar.dart';
+import '../services/admin_service.dart';
 
 
 class RegisterPage extends StatefulWidget {
@@ -60,6 +61,11 @@ class _RegisterPageState extends State<RegisterPage> {
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
+
+      final user = userCredential.user;
+      if (user != null) {
+        await AdminService.setupUserOnRegister(user);
+      }
 
       // E-posta doğrulama gönder
       await userCredential.user?.sendEmailVerification();

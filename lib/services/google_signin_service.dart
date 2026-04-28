@@ -1,7 +1,8 @@
+// lib/services/google_signin_service.dart
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'admin_service.dart'; // ✅ YENİ IMPORT
+import 'admin_service.dart';
 
 class GoogleSignInService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn();
@@ -12,7 +13,7 @@ class GoogleSignInService {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
-        // Kullanıcı iptal etti
+        // Kullanıcı Google giriş penceresini kapattı veya iptal etti.
         return null;
       }
 
@@ -26,17 +27,16 @@ class GoogleSignInService {
 
       final userCredential = await _auth.signInWithCredential(credential);
 
-      // ✅ YENİ: Admin sistemi entegrasyonu
       final user = userCredential.user;
       if (user != null) {
         await AdminService.setupUserOnRegister(user);
-        print("✅ Kullanıcı admin sistemi ile entegre edildi!");
+        print("✅ Kullanıcı Firestore users koleksiyonu ile eşitlendi.");
       }
 
       return userCredential;
     } catch (e) {
       print("Google Sign-In Hatası: $e");
-      return null;
+      rethrow;
     }
   }
 

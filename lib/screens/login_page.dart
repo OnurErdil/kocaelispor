@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../services/analytics_service.dart';
 import '../services/google_signin_service.dart';
+import '../services/admin_service.dart';
 import '../theme/app_theme.dart';
 import 'register_page.dart';
 import 'reset_password_page.dart';
@@ -64,10 +65,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     HapticFeedback.lightImpact();
 
     try {
-      await auth.signInWithEmailAndPassword(
+      final userCredential = await auth.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
+
+      final user = userCredential.user;
+      if (user != null) {
+        await AdminService.setupUserOnRegister(user);
+      }
 
       await AnalyticsService.logLogin('email');
 
@@ -131,17 +137,36 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
     try {
       final result = await GoogleSignInService.signInWithGoogle();
-      if (result != null) {
-        await AnalyticsService.logLogin('google');
 
+      if (result == null) {
         if (mounted) {
-          HapticFeedback.mediumImpact();
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const MainScreen()),
-                (route) => false,
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Google ile giriş iptal edildi.')),
+                ],
+              ),
+              backgroundColor: Colors.orange.shade600,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
           );
         }
+        return;
+      }
+
+      await AnalyticsService.logLogin('google');
+
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+              (route) => false,
+        );
       }
     } catch (e) {
       HapticFeedback.heavyImpact();
@@ -152,7 +177,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
-                Text('Google ile giriş yapılamadı: $e'),
+                Expanded(
+                  child: Text('Google ile giriş yapılamadı: ${e.toString()}'),
+                ),
               ],
             ),
             backgroundColor: Colors.red.shade600,
